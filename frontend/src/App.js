@@ -96,6 +96,7 @@ function App() {
   const [showContact, setShowContact] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [setPreviousView] = useState("home");
 
   const theme = {
     background: "#0d0c0b",
@@ -524,8 +525,9 @@ function App() {
                         FEATURED FILM
                       </h1>
                     </header>
-                    <div style={{ ...cardStyle(theme), width: "100%", maxWidth: "none", background: "none", border: "none", boxShadow: "none" }}>
-                      {/* --- Change this section in your Featured Film code --- */}
+                    
+                    {/* Removed cardStyle wrapper to allow image breakout */}
+                    <div style={{ width: "100%", position: "relative" }}>
                       <ProgressiveImage
                         src={movies[0].landscapeImage || movies[0].image}
                         alt={movies[0].name}
@@ -542,7 +544,8 @@ function App() {
                           borderRadius: "0px"
                         }}
                       />
-                      <div style={{ padding: "30px" }}>
+                      
+                      <div style={{ padding: "30px", maxWidth: "800px", margin: "0 auto" }}>
                         <div
                           style={{
                             display: "flex",
@@ -577,6 +580,7 @@ function App() {
                           >
                             VIEW TRAILER
                           </button>
+                          
                           {hasAccess[movies[0].name] ? (
                             <button
                               onClick={() => {
@@ -598,8 +602,10 @@ function App() {
                               BUY 3-MONTH ACCESS
                             </button>
                           )}
+                          
                           <button
                             onClick={() => {
+                              setPreviousView(view); // Fixes the back button issue
                               setSelectedMovie(movies[0]);
                               setView("movie-detail");
                             }}
