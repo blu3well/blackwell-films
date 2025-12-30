@@ -524,7 +524,7 @@ function App() {
                         FEATURED FILM
                       </h1>
                     </header>
-                    <div style={{ width: "100%", position: "relative", overflow: "visible" }}>
+                    <div style={{ ...cardStyle(theme), width: "100%", maxWidth: "none", background: "none", border: "none", boxShadow: "none" }}>
                       {/* --- Change this section in your Featured Film code --- */}
                       <ProgressiveImage
                         src={movies[0].landscapeImage || movies[0].image}
