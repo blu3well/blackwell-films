@@ -524,18 +524,22 @@ function App() {
                         FEATURED FILM
                       </h1>
                     </header>
-                    <div style={cardStyle(theme)}>
+                    <div style={{ width: "100%", position: "relative", overflow: "visible" }}>
                       {/* --- Change this section in your Featured Film code --- */}
                       <ProgressiveImage
                         src={movies[0].landscapeImage || movies[0].image}
                         alt={movies[0].name}
                         style={{
-                          width: "100%",          // Fills the container
-                          height: "500px",         // Standard cinematic height
-                          objectFit: "cover",      // Crops the image to fit perfectly without stretching
-                          objectPosition: "center", 
+                          width: "100vw",
+                          position: "relative",
+                          left: "50%",
+                          right: "50%",
+                          marginLeft: "-50vw",
+                          marginRight: "-50vw",
+                          height: "500px",
+                          objectFit: "cover",
                           display: "block",
-                          borderRadius: "0px",     // Optional: remove if you want sharp edges for the hero
+                          borderRadius: "0px"
                         }}
                       />
                       <div style={{ padding: "30px" }}>
