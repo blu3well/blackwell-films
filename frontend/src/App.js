@@ -525,12 +525,12 @@ function App() {
                         FEATURED FILM
                       </h1>
                     </header>
-                    
-                    {/* Removed cardStyle wrapper to allow image breakout */}
+
                     <div style={{ width: "100%", position: "relative" }}>
+                      {/* This image forces itself to the screen edges using viewport units */}
                       <ProgressiveImage
-                        src={movies[0].landscapeImage || movies[0].image}
-                        alt={movies[0].name}
+                        src={MOVIE_DATA[0].landscapeImage || MOVIE_DATA[0].image}
+                        alt={MOVIE_DATA[0].name}
                         style={{
                           width: "100vw",
                           position: "relative",
@@ -544,69 +544,34 @@ function App() {
                           borderRadius: "0px"
                         }}
                       />
-                      
+
                       <div style={{ padding: "30px", maxWidth: "800px", margin: "0 auto" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "20px",
-                          }}
-                        >
-                          <h2 style={{ color: theme.accent, margin: 0 }}>
-                            {movies[0].name}
-                          </h2>
-                          <span
-                            style={badgeStyle(theme, hasAccess[movies[0].name])}
-                          >
-                            {hasAccess[movies[0].name]
-                              ? "OWNED"
-                              : `KES ${movies[0].price}`}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                          <h2 style={{ color: theme.accent, margin: 0 }}>{MOVIE_DATA[0].name}</h2>
+                          <span style={badgeStyle(theme, hasAccess[MOVIE_DATA[0].name])}>
+                            {hasAccess[MOVIE_DATA[0].name] ? "OWNED" : `KES ${MOVIE_DATA[0].price}`}
                           </span>
                         </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "12px",
-                          }}
-                        >
-                          <button
-                            onClick={() =>
-                              setActiveTrailer(movies[0].trailerLink)
-                            }
-                            style={buttonStyle(theme, "secondary")}
-                          >
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                          <button onClick={() => setActiveTrailer(MOVIE_DATA[0].trailerLink)} style={buttonStyle(theme, "secondary")}>
                             VIEW TRAILER
                           </button>
-                          
-                          {hasAccess[movies[0].name] ? (
-                            <button
-                              onClick={() => {
-                                setSelectedMovie(movies[0]);
-                                setIsPlaying(true);
-                              }}
-                              style={buttonStyle(theme, "success")}
-                            >
+
+                          {hasAccess[MOVIE_DATA[0].name] ? (
+                            <button onClick={() => { setSelectedMovie(MOVIE_DATA[0]); setIsPlaying(true); }} style={buttonStyle(theme, "success")}>
                               ▶ WATCH NOW
                             </button>
                           ) : (
-                            <button
-                              onClick={() => {
-                                setSelectedMovie(movies[0]);
-                                setShowPaymentModal(true);
-                              }}
-                              style={buttonStyle(theme, "primary")}
-                            >
+                            <button onClick={() => { setSelectedMovie(MOVIE_DATA[0]); setShowPaymentModal(true); }} style={buttonStyle(theme, "primary")}>
                               BUY 3-MONTH ACCESS
                             </button>
                           )}
-                          
+
                           <button
                             onClick={() => {
-                              setPreviousView(view); // Fixes the back button issue
-                              setSelectedMovie(movies[0]);
+                              setPreviousView("home"); // Hardcoded "home" to stop the "not defined" error
+                              setSelectedMovie(MOVIE_DATA[0]);
                               setView("movie-detail");
                             }}
                             style={buttonStyle(theme, "ghost")}
