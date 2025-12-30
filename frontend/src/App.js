@@ -537,23 +537,21 @@ function App() {
                         }
                         alt={MOVIE_DATA[0].name}
                         style={{
-                          width: "100vw",
-                          position: "relative",
-                          left: "50%",
-                          right: "50%",
-                          marginLeft: "-50vw",
-                          marginRight: "-50vw",
-                          height: "auto", // Change from 500px to auto to stop cutting it
-                          aspectRatio: "16 / 9", // Optional: prevents it from being TOO tall on big screens
-                          objectFit: "cover",
-                          objectPosition: "centre", // Change to 'contain' if you want to see the FULL uncropped image
-                          display: "block",
-                          borderRadius: "0px",
+                          width: "100vw",           // Full width on mobile
+                            maxWidth: "1200px",       // Stops it from becoming "too big" on laptops
+                            position: "relative",
+                            left: "50%",
+                            transform: "translateX(-50%)", // Perfectly centers the image even when wide
+                            height: "auto",
+                            aspectRatio: "16 / 9",
+                            objectFit: "cover",
+                            display: "block",
+                            borderRadius: "0px",
                         }}
                       />
 
                       {/* Wrap ONLY the text and buttons in the centered container */}
-                      <div style={{ ...centeredContainer, padding: "30px 0" }}>
+                      <div style={{ ...centeredContainer, maxWidth: "1200px", padding: "30px 5%" }}>
                         <div
                           style={{
                             display: "flex",
