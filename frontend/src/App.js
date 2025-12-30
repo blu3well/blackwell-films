@@ -96,7 +96,7 @@ function App() {
   const [showContact, setShowContact] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [setPreviousView] = useState("home");
+  const [previousView, setPreviousView] = useState("home");
 
   const theme = {
     background: "#0d0c0b",
@@ -510,7 +510,7 @@ function App() {
             {!searchQuery && (
               <>
                 {view === "home" && (
-                  <div style={centeredContainer}>
+                  <div> {/* Removed centeredContainer from here */}
                     <header
                       style={{ marginBottom: "50px", textAlign: "center" }}
                     >
@@ -527,7 +527,6 @@ function App() {
                     </header>
 
                     <div style={{ width: "100%", position: "relative" }}>
-                      {/* This image forces itself to the screen edges using viewport units */}
                       <ProgressiveImage
                         src={MOVIE_DATA[0].landscapeImage || MOVIE_DATA[0].image}
                         alt={MOVIE_DATA[0].name}
@@ -545,7 +544,8 @@ function App() {
                         }}
                       />
 
-                      <div style={{ padding: "30px", maxWidth: "800px", margin: "0 auto" }}>
+                      {/* Wrap ONLY the text and buttons in the centered container */}
+                      <div style={{ ...centeredContainer, padding: "30px 0" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                           <h2 style={{ color: theme.accent, margin: 0 }}>{MOVIE_DATA[0].name}</h2>
                           <span style={badgeStyle(theme, hasAccess[MOVIE_DATA[0].name])}>
@@ -570,7 +570,7 @@ function App() {
 
                           <button
                             onClick={() => {
-                              setPreviousView("home"); // Hardcoded "home" to stop the "not defined" error
+                              setPreviousView("home"); 
                               setSelectedMovie(MOVIE_DATA[0]);
                               setView("movie-detail");
                             }}
@@ -587,7 +587,7 @@ function App() {
                 {view === "movie-detail" && (
                   <div style={{ maxWidth: "900px", margin: "0 auto" }}>
                     <button
-                      onClick={() => setView("movies")}
+                      onClick={() => setView(previousView)}
                       style={{
                         color: theme.accent,
                         background: "none",
