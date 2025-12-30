@@ -6,7 +6,8 @@ const MOVIE_DATA = [
     id: "cards-on-the-table",
     name: "Cards on the Table",
     price: 250,
-    description: "An ex-couple team up to rob the gate collections at a Christmas event in 1992 Nairobi, but their layers of unresolved issues land them in police custody.",
+    description:
+      "An ex-couple team up to rob the gate collections at a Christmas event in 1992 Nairobi, but their layers of unresolved issues land them in police custody.",
     cast: ["Nyakundi Isaboke, Shirleen Wangari, Mufasa Poet, Murunyu Duncan"],
     director: "Victor Gatonye",
     genre: "Romantic Drama, Comedy",
@@ -75,7 +76,8 @@ function ProgressiveImage({ src, alt, style }) {
 }
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [token, setToken] = useState(() => localStorage.getItem("token"));
+  const [userEmail, setUserEmail] = useState(() => localStorage.getItem("userEmail"));
   const [view, setView] = useState("home");
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -151,6 +153,7 @@ function App() {
     };
     checkAllAccess();
   }, [token, movies, API_BASE]); // <--- Added API_BASE here
+
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -165,6 +168,7 @@ function App() {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("userEmail", formData.email);
         setToken(res.data.token);
+        setUserEmail(formData.email); // ADDED THIS: Updates the UI immediately
         showFeedback("success", "Logged in successfully");
       } else {
         showFeedback("success", "Account created! Please log in.");
@@ -180,7 +184,6 @@ function App() {
   };
 
   const payWithPaystack = () => {
-    const userEmail = localStorage.getItem("userEmail");
     const handler = window.PaystackPop.setup({
       key: "pk_test_8196b2b3d7ad464e3e647c4d23a1e092a40b8da8",
       email: userEmail,
@@ -510,7 +513,9 @@ function App() {
             {!searchQuery && (
               <>
                 {view === "home" && (
-                  <div> {/* Removed centeredContainer from here */}
+                  <div>
+                    {" "}
+                    {/* Removed centeredContainer from here */}
                     <header
                       style={{ marginBottom: "50px", textAlign: "center" }}
                     >
@@ -525,10 +530,11 @@ function App() {
                         FEATURED FILM
                       </h1>
                     </header>
-
                     <div style={{ width: "100%", position: "relative" }}>
                       <ProgressiveImage
-                        src={MOVIE_DATA[0].landscapeImage || MOVIE_DATA[0].image}
+                        src={
+                          MOVIE_DATA[0].landscapeImage || MOVIE_DATA[0].image
+                        }
                         alt={MOVIE_DATA[0].name}
                         style={{
                           width: "100vw",
@@ -537,41 +543,81 @@ function App() {
                           right: "50%",
                           marginLeft: "-50vw",
                           marginRight: "-50vw",
-                          height: "auto",          // Change from 500px to auto to stop cutting it
-                          maxHeight: "70vh",       // Optional: prevents it from being TOO tall on big screens
-                          objectFit: "contain",    // Change to 'contain' if you want to see the FULL uncropped image
+                          height: "auto", // Change from 500px to auto to stop cutting it
+                          aspectRatio: "16 / 9", // Optional: prevents it from being TOO tall on big screens
+                          objectFit: "cover",
+                          objectPosition: "centre", // Change to 'contain' if you want to see the FULL uncropped image
                           display: "block",
-                          borderRadius: "0px"
+                          borderRadius: "0px",
                         }}
                       />
 
                       {/* Wrap ONLY the text and buttons in the centered container */}
                       <div style={{ ...centeredContainer, padding: "30px 0" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                          <h2 style={{ color: theme.accent, margin: 0 }}>{MOVIE_DATA[0].name}</h2>
-                          <span style={badgeStyle(theme, hasAccess[MOVIE_DATA[0].name])}>
-                            {hasAccess[MOVIE_DATA[0].name] ? "OWNED" : `KES ${MOVIE_DATA[0].price}`}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "20px",
+                          }}
+                        >
+                          <h2 style={{ color: theme.accent, margin: 0 }}>
+                            {MOVIE_DATA[0].name}
+                          </h2>
+                          <span
+                            style={badgeStyle(
+                              theme,
+                              hasAccess[MOVIE_DATA[0].name]
+                            )}
+                          >
+                            {hasAccess[MOVIE_DATA[0].name]
+                              ? "OWNED"
+                              : `KES ${MOVIE_DATA[0].price}`}
                           </span>
                         </div>
 
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                          <button onClick={() => setActiveTrailer(MOVIE_DATA[0].trailerLink)} style={buttonStyle(theme, "secondary")}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "12px",
+                          }}
+                        >
+                          <button
+                            onClick={() =>
+                              setActiveTrailer(MOVIE_DATA[0].trailerLink)
+                            }
+                            style={buttonStyle(theme, "secondary")}
+                          >
                             VIEW TRAILER
                           </button>
 
                           {hasAccess[MOVIE_DATA[0].name] ? (
-                            <button onClick={() => { setSelectedMovie(MOVIE_DATA[0]); setIsPlaying(true); }} style={buttonStyle(theme, "success")}>
+                            <button
+                              onClick={() => {
+                                setSelectedMovie(MOVIE_DATA[0]);
+                                setIsPlaying(true);
+                              }}
+                              style={buttonStyle(theme, "success")}
+                            >
                               ▶ WATCH NOW
                             </button>
                           ) : (
-                            <button onClick={() => { setSelectedMovie(MOVIE_DATA[0]); setShowPaymentModal(true); }} style={buttonStyle(theme, "primary")}>
+                            <button
+                              onClick={() => {
+                                setSelectedMovie(MOVIE_DATA[0]);
+                                setShowPaymentModal(true);
+                              }}
+                              style={buttonStyle(theme, "primary")}
+                            >
                               BUY 3-MONTH ACCESS
                             </button>
                           )}
 
                           <button
                             onClick={() => {
-                              setPreviousView("home"); 
+                              setPreviousView("home");
                               setSelectedMovie(MOVIE_DATA[0]);
                               setView("movie-detail");
                             }}
@@ -847,20 +893,11 @@ function App() {
                             fontWeight: "bold",
                           }}
                         >
-                          {localStorage
-                            .getItem("userEmail")
-                            ?.charAt(0)
-                            .toUpperCase()}
+                          {userEmail?.charAt(0).toUpperCase()}
                         </div>
                         <h4 style={{ margin: "0 0 5px 0" }}>Member</h4>
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            marginBottom: "20px",
-                          }}
-                        >
-                          {localStorage.getItem("userEmail")}
+                        <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
+                          {userEmail}
                         </p>
                         <button
                           onClick={() => {
@@ -988,9 +1025,27 @@ function App() {
               </div>
               <div>
                 <h5 style={footerHead}>Connect</h5>
-                <a href="https://www.tiktok.com/@blackwellfilms?lang=en" target="_blank" rel="noreferrer">TikTok</a>
-                <a href="https://www.instagram.com/blackwell_films/" target="_blank" rel="noreferrer">Instagram</a>
-                <a href="https://www.facebook.com/Blackwellfilms" target="_blank" rel="noreferrer">Facebook</a>
+                <a
+                  href="https://www.tiktok.com/@blackwellfilms?lang=en"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  TikTok
+                </a>
+                <a
+                  href="https://www.instagram.com/blackwell_films/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Instagram
+                </a>
+                <a
+                  href="https://www.facebook.com/Blackwellfilms"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Facebook
+                </a>
               </div>
             </div>
           </footer>
@@ -998,7 +1053,14 @@ function App() {
       ) : (
         <div style={authContainer}>
           {/* This new div centers the logo and the card together */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "20px",
+            }}
+          >
             <h1
               style={{
                 color: theme.accent,
@@ -1006,83 +1068,93 @@ function App() {
                 fontSize: "42px",
                 letterSpacing: "4px",
                 fontWeight: "bold",
-                textAlign: "center"
+                textAlign: "center",
               }}
             >
               BLACKWELL
             </h1>
             <div style={authCard(theme)}>
-              <h2 style={{ textAlign: "center", color: theme.accent, marginTop: 0 }}>
+              <h2
+                style={{
+                  textAlign: "center",
+                  color: theme.accent,
+                  marginTop: 0,
+                }}
+              >
                 {isLogin ? "Login" : "Sign Up"}
               </h2>
-            <form
-              onSubmit={handleSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: "15px" }}
-            >
-              {!isLogin && (
+              <form
+                onSubmit={handleSubmit}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
+                }}
+              >
+                {!isLogin && (
+                  <input
+                    name="full_name"
+                    placeholder="Full Name"
+                    onChange={handleChange}
+                    style={inputStyle(theme)}
+                  />
+                )}
                 <input
-                  name="full_name"
-                  placeholder="Full Name"
+                  name="email"
+                  placeholder="Email"
                   onChange={handleChange}
                   style={inputStyle(theme)}
+                  required
                 />
+                <input
+                  name="password"
+                  type="password"
+                  placeholder="Password"
+                  onChange={handleChange}
+                  style={inputStyle(theme)}
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  style={{
+                    ...buttonStyle(theme, "primary"),
+                    opacity: isProcessing ? 0.6 : 1,
+                  }}
+                >
+                  {isProcessing
+                    ? "PROCESSING..."
+                    : isLogin
+                    ? "Login"
+                    : "Create Account"}
+                </button>
+              </form>
+              {message && (
+                <p
+                  style={{
+                    color: theme.accent,
+                    textAlign: "center",
+                    fontSize: "14px",
+                    marginTop: "10px",
+                  }}
+                >
+                  {message}
+                </p>
               )}
-              <input
-                name="email"
-                placeholder="Email"
-                onChange={handleChange}
-                style={inputStyle(theme)}
-                required
-              />
-              <input
-                name="password"
-                type="password"
-                placeholder="Password"
-                onChange={handleChange}
-                style={inputStyle(theme)}
-                required
-              />
-              <button
-                type="submit"
-                disabled={isProcessing}
-                style={{
-                  ...buttonStyle(theme, "primary"),
-                  opacity: isProcessing ? 0.6 : 1,
-                }}
-              >
-                {isProcessing
-                  ? "PROCESSING..."
-                  : isLogin
-                  ? "Login"
-                  : "Create Account"}
-              </button>
-            </form>
-            {message && (
               <p
+                onClick={() => setIsLogin(!isLogin)}
                 style={{
-                  color: theme.accent,
                   textAlign: "center",
+                  cursor: "pointer",
+                  color: theme.accent,
                   fontSize: "14px",
-                  marginTop: "10px",
+                  marginTop: "15px",
                 }}
               >
-                {message}
+                {isLogin ? "Sign Up" : "Back to Login"}
               </p>
-            )}
-            <p
-              onClick={() => setIsLogin(!isLogin)}
-              style={{
-                textAlign: "center",
-                cursor: "pointer",
-                color: theme.accent,
-                fontSize: "14px",
-                marginTop: "15px",
-              }}
-            >
-              {isLogin ? "Sign Up" : "Back to Login"}
-            </p>
+            </div>
           </div>
-        </div>
         </div>
       )}
 
