@@ -12,8 +12,8 @@ const MOVIE_DATA = [
     genre: "Romantic Drama, Comedy",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
     movieFile: "https://player.vimeo.com/video/1145911659",
-    image: "/COTTposter1.png", // This remains the Portrait one
-    landscapeImage: "/COTTP2.png", // Add this for the Featured section
+    image: "/COTTposter1.jpg", // This remains the Portrait one
+    landscapeImage: "/COTTP2.jpg", // Add this for the Featured section
     isFeatured: true,
     type: "movie",
   },
