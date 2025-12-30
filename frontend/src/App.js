@@ -666,6 +666,17 @@ function App() {
                         <p style={{ lineHeight: "1.8", color: "#bbb" }}>
                           {selectedMovie.description}
                         </p>
+                        <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                          <div style={{ fontSize: "14px" }}>
+                            <span style={{ color: theme.accent, fontWeight: "bold" }}>GENRE:</span> {selectedMovie.genre}
+                          </div>
+                          <div style={{ fontSize: "14px" }}>
+                            <span style={{ color: theme.accent, fontWeight: "bold" }}>DIRECTOR:</span> {selectedMovie.director}
+                          </div>
+                          <div style={{ fontSize: "14px" }}>
+                            <span style={{ color: theme.accent, fontWeight: "bold" }}>CAST:</span> {selectedMovie.cast.join(", ")}
+                          </div>
+                        </div>
                         <div
                           style={{
                             display: "flex",
