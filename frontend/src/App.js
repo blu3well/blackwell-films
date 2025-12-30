@@ -537,8 +537,9 @@ function App() {
                           right: "50%",
                           marginLeft: "-50vw",
                           marginRight: "-50vw",
-                          height: "500px",
-                          objectFit: "cover",
+                          height: "auto",          // Change from 500px to auto to stop cutting it
+                          maxHeight: "70vh",       // Optional: prevents it from being TOO tall on big screens
+                          objectFit: "contain",    // Change to 'contain' if you want to see the FULL uncropped image
                           display: "block",
                           borderRadius: "0px"
                         }}
@@ -961,7 +962,7 @@ function App() {
                     fontSize: "18px",
                   }}
                 >
-                  BLACKWELL FILMS
+                  BLACKWELL
                 </h4>
               </div>
               <div>
@@ -996,10 +997,24 @@ function App() {
         </>
       ) : (
         <div style={authContainer}>
-          <div style={authCard(theme)}>
-            <h1 style={{ textAlign: "center", color: theme.accent }}>
-              {isLogin ? "Login" : "Sign Up"}
+          {/* This new div centers the logo and the card together */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <h1
+              style={{
+                color: theme.accent,
+                margin: 0,
+                fontSize: "42px",
+                letterSpacing: "4px",
+                fontWeight: "bold",
+                textAlign: "center"
+              }}
+            >
+              BLACKWELL
             </h1>
+            <div style={authCard(theme)}>
+              <h2 style={{ textAlign: "center", color: theme.accent, marginTop: 0 }}>
+                {isLogin ? "Login" : "Sign Up"}
+              </h2>
             <form
               onSubmit={handleSubmit}
               style={{ display: "flex", flexDirection: "column", gap: "15px" }}
