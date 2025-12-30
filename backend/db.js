@@ -1,11 +1,11 @@
-const { Pool } = require("pg");
-require("dotenv").config();
+const { Pool } = require('pg');
+require('dotenv').config();
 
 const pool = new Pool({
-  connectionString: process.env.DB_URL,
+  connectionString: process.env.DATABASE_URL, // Ensure this matches Render key
   ssl: {
-    rejectUnauthorized: false, // This line is mandatory for Neon
-  },
+    rejectUnauthorized: false 
+  }
 });
 
 module.exports = pool;

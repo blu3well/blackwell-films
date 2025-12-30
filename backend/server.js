@@ -41,8 +41,9 @@ app.post("/api/register", async (req, res) => {
       [full_name, email, hashedPassword]
     );
     res.json({ message: "User registered!" });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
+  } catch (error) { 
+    console.log("SERVER ERROR:", error); // THIS LINE WILL SHOW IN RENDER LOGS
+    res.status(500).send("Server Error");
   }
 });
 

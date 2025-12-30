@@ -118,11 +118,7 @@ function App() {
       )
   );
 
-  const API_BASE =
-    window.location.hostname === "localhost"
-      ? "http://localhost:5555/api"
-      : "https://blackwell-api.onrender.com/api";
-
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
   const showFeedback = (type, msg) => {
     setStatus({ type, message: msg });
     setTimeout(() => setStatus({ type: "", message: "" }), 5000);
@@ -138,21 +134,20 @@ function App() {
       const accessStatus = {};
       for (let movie of movies) {
         try {
-          const res = await axios.post(
-            `${API_BASE}/check-access`,
-            { movieName: movie.name },
+          // It was using API_BASE here, so it must be in the array below
+          const res = await axios.post(`${API_BASE}/check-access`, 
+            { movieName: movie.name }, 
             { headers: { Authorization: `Bearer ${token}` } }
           );
           accessStatus[movie.name] = res.data.hasAccess;
-        } catch (err) {
-          accessStatus[movie.name] = false;
+        } catch (err) { 
+          accessStatus[movie.name] = false; 
         }
       }
       setHasAccess(accessStatus);
     };
     checkAllAccess();
-  }, [token, movies]);
-
+  }, [token, movies, API_BASE]); // <--- Added API_BASE here
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
