@@ -6,13 +6,13 @@ const MOVIE_DATA = [
     id: "cards-on-the-table",
     name: "Cards on the Table",
     price: 250,
-    description:
-      "A high-stakes psychological thriller where every move counts. When a mysterious host invites four master players to a game of wits, the stakes quickly transition from money to life itself.",
+    description: "A high-stakes psychological thriller...",
     cast: ["Julian Blackwell", "Sarah Jenkins", "Marcus Thorne", "Elena Rossi"],
     director: "A. Blackwell",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
     movieFile: "https://player.vimeo.com/video/1145911659",
-    image: "/COTTposter.png",
+    image: "/COTTposter.png", // This remains the Portrait one
+    landscapeImage: "/COTT2.png", // Add this for the Featured section
     isFeatured: true,
     type: "movie",
   },
@@ -135,13 +135,14 @@ function App() {
       for (let movie of movies) {
         try {
           // It was using API_BASE here, so it must be in the array below
-          const res = await axios.post(`${API_BASE}/check-access`, 
-            { movieName: movie.name }, 
+          const res = await axios.post(
+            `${API_BASE}/check-access`,
+            { movieName: movie.name },
             { headers: { Authorization: `Bearer ${token}` } }
           );
           accessStatus[movie.name] = res.data.hasAccess;
-        } catch (err) { 
-          accessStatus[movie.name] = false; 
+        } catch (err) {
+          accessStatus[movie.name] = false;
         }
       }
       setHasAccess(accessStatus);
@@ -523,12 +524,14 @@ function App() {
                       </h1>
                     </header>
                     <div style={cardStyle(theme)}>
+                      {/* --- Change this section in your Featured Film code --- */}
                       <ProgressiveImage
-                        src={movies[0].image}
+                        src={movies[0].landscapeImage || movies[0].image} // It will use COTT2 if it exists
                         alt={movies[0].name}
                         style={{
                           width: "100%",
-                          height: "auto",
+                          height: "400px", // Fixed height for landscape look
+                          objectFit: "cover", // Prevents stretching
                           display: "block",
                         }}
                       />
