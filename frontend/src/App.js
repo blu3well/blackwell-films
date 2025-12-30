@@ -6,13 +6,14 @@ const MOVIE_DATA = [
     id: "cards-on-the-table",
     name: "Cards on the Table",
     price: 250,
-    description: "A high-stakes psychological thriller...",
-    cast: ["Julian Blackwell", "Sarah Jenkins", "Marcus Thorne", "Elena Rossi"],
-    director: "A. Blackwell",
+    description: "An ex-couple team up to rob the gate collections at a Christmas event in 1992 Nairobi, but their layers of unresolved issues land them in police custody.",
+    cast: ["Nyakundi Isaboke, Shirleen Wangari, Mufasa Poet, Murunyu Duncan"],
+    director: "Victor Gatonye",
+    genre: "Romantic Drama, Comedy",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
     movieFile: "https://player.vimeo.com/video/1145911659",
-    image: "/COTTposter.png", // This remains the Portrait one
-    landscapeImage: "/COTT2.png", // Add this for the Featured section
+    image: "/COTTposter1.png", // This remains the Portrait one
+    landscapeImage: "/COTTP2.png", // Add this for the Featured section
     isFeatured: true,
     type: "movie",
   },
@@ -526,13 +527,15 @@ function App() {
                     <div style={cardStyle(theme)}>
                       {/* --- Change this section in your Featured Film code --- */}
                       <ProgressiveImage
-                        src={movies[0].landscapeImage || movies[0].image} // It will use COTT2 if it exists
+                        src={movies[0].landscapeImage || movies[0].image}
                         alt={movies[0].name}
                         style={{
-                          width: "100%",
-                          height: "400px", // Fixed height for landscape look
-                          objectFit: "cover", // Prevents stretching
+                          width: "100%",          // Fills the container
+                          height: "500px",         // Standard cinematic height
+                          objectFit: "cover",      // Crops the image to fit perfectly without stretching
+                          objectPosition: "center", 
                           display: "block",
+                          borderRadius: "0px",     // Optional: remove if you want sharp edges for the hero
                         }}
                       />
                       <div style={{ padding: "30px" }}>
@@ -1009,9 +1012,9 @@ function App() {
               </div>
               <div>
                 <h5 style={footerHead}>Connect</h5>
-                <a href="#">TikTok</a>
-                <a href="#">Instagram</a>
-                <a href="#">Twitter</a>
+                <a href="https://www.tiktok.com/@blackwellfilms?lang=en" target="_blank" rel="noreferrer">TikTok</a>
+                <a href="https://www.instagram.com/blackwell_films/" target="_blank" rel="noreferrer">Instagram</a>
+                <a href="https://www.facebook.com/Blackwellfilms" target="_blank" rel="noreferrer">Facebook</a>
               </div>
             </div>
           </footer>
