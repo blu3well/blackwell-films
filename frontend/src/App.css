@@ -10,6 +10,8 @@
   --error-color: #e74c3c;
   --border-color: #2b2824;
   --nav-height: 80px;
+  /* Premium Transition Speed */
+  --transition-main: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body,
@@ -21,6 +23,7 @@ html {
   color: var(--text-color);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  scroll-behavior: smooth; /* Enables smooth scrolling for the Info section */
 }
 
 * {
@@ -33,18 +36,21 @@ html {
   min-height: 100vh;
 }
 
-/* --- NAVIGATION --- */
+/* --- NAVIGATION (Updated with Glassmorphism) --- */
 .nav-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 5%;
-  background-color: var(--surface-color);
+  background-color: rgba(26, 24, 22, 0.85); /* Transparent for glass effect */
+  backdrop-filter: blur(12px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 100;
   height: var(--nav-height);
+  transition: var(--transition-main);
 }
 
 .nav-left,
@@ -62,6 +68,12 @@ html {
   margin-right: 40px;
   font-weight: 800;
   text-transform: uppercase;
+  transition: var(--transition-main);
+}
+
+.nav-logo:hover {
+  opacity: 0.8;
+  transform: scale(1.02);
 }
 
 .nav-links {
@@ -74,7 +86,7 @@ html {
   text-decoration: none;
   font-size: 14px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: var(--transition-main); /* Added smooth transition */
   padding-bottom: 5px;
   border-bottom: 2px solid transparent;
 }
@@ -101,7 +113,7 @@ html {
   padding: 8px 35px 8px 15px;
   border-radius: 20px;
   outline: none;
-  transition: 0.3s;
+  transition: var(--transition-main);
   width: 200px;
   font-size: 13px;
 }
@@ -109,6 +121,7 @@ html {
 .search-input:focus {
   border-color: var(--accent-color);
   width: 280px;
+  box-shadow: 0 0 15px rgba(212, 163, 115, 0.2);
 }
 
 .search-clear {
@@ -121,7 +134,7 @@ html {
   font-size: 12px;
 }
 
-/* --- BUTTONS --- */
+/* --- BUTTONS (Updated with Hover Scales) --- */
 .btn {
   padding: 16px;
   border-radius: 8px;
@@ -130,8 +143,18 @@ html {
   width: 100%;
   border: none;
   font-size: 13px;
-  transition: 0.3s;
+  transition: var(--transition-main); /* Smooth transitions */
   letter-spacing: 1px;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .btn-sm {
@@ -176,6 +199,11 @@ html {
   width: auto;
   text-align: left;
   padding: 0;
+  transition: var(--transition-main);
+}
+
+.btn-back:hover {
+  transform: translateX(-5px);
 }
 
 .btn-logout {
@@ -186,48 +214,55 @@ html {
   border-radius: 5px;
   cursor: pointer;
   font-size: 12px;
+  transition: var(--transition-main);
 }
 
-.btn-close-theater {
-  position: absolute;
-  top: 20px;
-  right: 30px;
-  color: #fff;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
+.btn-logout:hover {
+  background: #422;
 }
 
-/* Play Button Overlay */
+/* --- PLAY BUTTON (Updated with Pulse/Glow) --- */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 163, 115, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(212, 163, 115, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 163, 115, 0);
+  }
+}
+
 .play-overlay-btn {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 80px;
-  height: 80px;
-  background-color: rgba(0, 0, 0, 0.6);
+  width: 85px;
+  height: 85px;
+  background-color: rgba(0, 0, 0, 0.7);
   border: 2px solid var(--accent-color);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  transition: all 0.3s ease;
   z-index: 10;
+  animation: pulse-glow 2s infinite; /* Vivid Pulse Effect */
+  transition: var(--transition-main);
 }
 
 .play-overlay-btn:hover {
   background-color: var(--accent-color);
-  transform: translate(-50%, -50%) scale(1.1);
+  transform: translate(-50%, -50%) scale(1.15);
+  animation: none; /* Stop pulse on hover for focus */
 }
 
 .play-icon {
-  font-size: 30px;
+  font-size: 32px;
   color: white;
-  margin-left: 5px;
+  margin-left: 6px;
 }
 
 /* --- LAYOUTS --- */
@@ -248,10 +283,11 @@ html {
   padding: 30px 5%;
 }
 
-/* --- FEATURED SECTION --- */
+/* --- HERO SECTION --- */
 .hero-wrapper {
   width: 100%;
   position: relative;
+  overflow: hidden; /* Contains the image scale effect */
 }
 
 .hero-image {
@@ -261,6 +297,11 @@ html {
   object-fit: cover;
   display: block;
   border-radius: 0px;
+  transition: transform 1.2s ease; /* Smooth zoom transition */
+}
+
+.hero-wrapper:hover .hero-image {
+  transform: scale(1.03); /* Subtle cinematic zoom */
 }
 
 .hero-content {
@@ -274,9 +315,9 @@ html {
 .hero-actions {
   display: flex;
   flex-direction: column;
-  gap: 20px; /* Increased spacing between buttons */
+  gap: 20px;
   max-width: 600px;
-  margin: 40px auto 0 auto; /* Spacing before buttons start */
+  margin: 40px auto 0 auto;
 }
 
 .home-movie-info {
@@ -285,7 +326,7 @@ html {
   border-top: 1px solid #222;
 }
 
-/* --- CARDS & GRIDS --- */
+/* --- CARDS & GRIDS (Updated with Lift/Shadow) --- */
 .movie-grid {
   display: flex;
   flex-direction: column;
@@ -297,6 +338,13 @@ html {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border-color);
+  transition: var(--transition-main); /* Smooth lift effect */
+}
+
+.movie-card:hover {
+  transform: translateY(-10px); /* Lifts the card */
+  border-color: var(--accent-color);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); /* Tactile shadow */
 }
 
 .card-content {
@@ -306,7 +354,38 @@ html {
   align-items: center;
 }
 
-/* --- BADGES --- */
+/* --- RESPONSIVENESS (New Media Queries) --- */
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr; /* Stacks image and info on mobile */
+    gap: 30px;
+    text-align: center;
+  }
+
+  .detail-title {
+    font-size: 2rem;
+  }
+
+  .hero-image {
+    max-height: 60vh; /* Shorter image on mobile */
+  }
+
+  .nav-bar {
+    padding: 0 15px;
+  }
+
+  .nav-logo {
+    font-size: 22px;
+    margin-right: 15px;
+  }
+
+  .search-input:focus {
+    width: 180px;
+  }
+}
+
+/* --- REST OF CSS KEPT AS IS --- */
+
 .badge {
   padding: 6px 12px;
   border-radius: 4px;
@@ -329,7 +408,6 @@ html {
   border-radius: 4px;
 }
 
-/* --- MOVIE DETAIL --- */
 .detail-container {
   max-width: 900px;
   margin: 0 auto;
@@ -372,12 +450,11 @@ html {
 .meta-label {
   color: var(--accent-color);
   font-weight: bold;
-  letter-spacing: normal !important; /* Fixed: Prevents unwanted spacing in "CAST" */
+  letter-spacing: normal !important;
   display: inline-block;
   min-width: 90px;
 }
 
-/* --- PROFILE --- */
 .profile-container {
   max-width: 800px;
   margin: 0 auto;
@@ -427,7 +504,6 @@ html {
   border: 1px solid #222;
 }
 
-/* --- AUTH --- */
 .auth-wrapper {
   display: flex;
   flex-direction: column;
@@ -475,7 +551,6 @@ html {
   margin-top: 15px;
 }
 
-/* --- FOOTER --- */
 .app-footer {
   background-color: var(--surface-color);
   padding: 60px 5% 40px 5%;
@@ -523,7 +598,6 @@ html {
   color: var(--accent-color);
 }
 
-/* --- OVERLAYS & MODALS --- */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -570,7 +644,6 @@ html {
   background-color: var(--error-color);
 }
 
-/* --- PROGRESSIVE IMAGE & ANIMATIONS --- */
 .progressive-image-container {
   position: relative;
   width: 100%;
