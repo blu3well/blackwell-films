@@ -66,6 +66,16 @@ html {
   color: var(--accent-color);
 }
 
+.btn-logout {
+  background: transparent;
+  color: #ff6b6b;
+  border: 1px solid #422;
+  padding: 8px 15px;
+  border-radius: 5px; /* Fixed: was borderRadius */
+  cursor: pointer;
+  font-size: 12px; /* Fixed: was fontSize */
+}
+
 /* --- HERO SECTION --- */
 .hero-wrapper {
   width: 100%;
@@ -178,7 +188,21 @@ html {
   padding-bottom: 10px;
 }
 
-/* --- MODALS --- */
+/* --- FOOTER --- */
+.app-footer {
+  padding: 80px 5%;
+  background: #000;
+  border-top: 1px solid #222;
+  margin-top: auto;
+}
+
+.footer-grid {
+  display: flex;
+  justify-content: center;
+  gap: 80px;
+}
+
+/* --- MODALS & TOAST --- */
 .theater-overlay {
   position: fixed;
   top: 0;

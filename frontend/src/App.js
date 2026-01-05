@@ -136,18 +136,19 @@ function App() {
         <h2 className="nav-logo" onClick={() => setView("home")}>
           BLACKWELL
         </h2>
+
+        {/* RESTORED NAVIGATION LINKS */}
         <div style={{ display: "flex", gap: "25px", alignItems: "center" }}>
+          <span className="nav-link" onClick={() => setView("home")}>
+            Movies
+          </span>
+          <span className="nav-link">Shows</span>
+          <span className="nav-link">Watchlist</span>
+          {token && <span className="nav-link">Profile</span>}
+
           {token ? (
             <button
               className="btn-logout"
-              style={{
-                background: "transparent",
-                border: "1px solid #444",
-                color: "white",
-                padding: "8px 15px",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
               onClick={() => {
                 localStorage.clear();
                 setToken(null);
@@ -363,26 +364,49 @@ function App() {
         )}
       </main>
 
-      <footer
-        style={{
-          padding: "80px 5%",
-          background: "#000",
-          borderTop: "1px solid #222",
-          marginTop: "auto",
-        }}
-      >
-        <h2
-          className="nav-logo"
-          style={{ textAlign: "center", marginBottom: "40px" }}
-        >
-          BLACKWELL
-        </h2>
+      {/* RESTORED FULL FOOTER */}
+      <footer className="app-footer">
         <div
-          style={{ display: "center", justifyContent: "center", gap: "40px" }}
+          style={{
+            textAlign: "center",
+            borderBottom: "1px solid #222",
+            paddingBottom: "40px",
+            marginBottom: "40px",
+          }}
         >
-          <span className="nav-link">Instagram</span>
-          <span className="nav-link">TikTok</span>
-          <span className="nav-link">Facebook</span>
+          <h2 className="nav-logo" style={{ fontSize: "20px" }}>
+            BLACKWELL
+          </h2>
+        </div>
+        <div className="footer-grid">
+          <div>
+            <h5 className="meta-label" style={{ minWidth: "auto" }}>
+              LEGAL
+            </h5>
+            <span
+              className="nav-link"
+              style={{ display: "block", marginBottom: "10px" }}
+            >
+              Terms of Service
+            </span>
+            <span className="nav-link" style={{ display: "block" }}>
+              Privacy Policy
+            </span>
+          </div>
+          <div>
+            <h5 className="meta-label" style={{ minWidth: "auto" }}>
+              SOCIAL
+            </h5>
+            <span
+              className="nav-link"
+              style={{ display: "block", marginBottom: "10px" }}
+            >
+              Instagram
+            </span>
+            <span className="nav-link" style={{ display: "block" }}>
+              TikTok
+            </span>
+          </div>
         </div>
       </footer>
 
@@ -522,7 +546,6 @@ function App() {
         </div>
       )}
 
-      {/* Corrected iframes with unique titles */}
       {isPlaying && (
         <div className="theater-overlay">
           <button
