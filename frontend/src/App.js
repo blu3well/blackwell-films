@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
+import "./App.css";
 
 const MOVIE_DATA = [
   {
@@ -13,8 +14,8 @@ const MOVIE_DATA = [
     genre: "Romantic Drama, Comedy",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
     movieFile: "https://player.vimeo.com/video/1145911659",
-    image: "/COTTposter1.jpg", // This remains the Portrait one
-    landscapeImage: "/COTTP2.jpg", // Add this for the Featured section
+    image: "/COTTposter1.jpg",
+    landscapeImage: "/COTTP2.jpg",
     isFeatured: true,
     type: "movie",
   },
@@ -33,36 +34,25 @@ const LEGAL_TEXT = {
   4. COOKIES: WE USE ESSENTIAL COOKIES TO KEEP YOU LOGGED IN.`,
 };
 
-function ProgressiveImage({ src, alt, style }) {
+function ProgressiveImage({ src, alt, className, style, onClick }) {
   const [loaded, setLoaded] = useState(false);
   return (
     <div
-      style={{
-        position: "relative",
-        width: "100%",
-        backgroundColor: "#1a1816",
-        overflow: "hidden",
-      }}
+      className={`progressive-image-container ${className || ""}`}
+      style={style}
+      onClick={onClick}
     >
-      {!loaded && (
-        <div
-          className="shimmer"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-          }}
-        />
-      )}
+      {!loaded && <div className="shimmer" />}
       <img
         src={src}
         alt={alt}
+        className="progressive-img"
         style={{
-          ...style,
           opacity: loaded ? 1 : 0,
-          transition: "opacity 0.8s ease-in-out",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
         }}
         onLoad={() => setLoaded(true)}
         onError={(e) => {
@@ -77,14 +67,21 @@ function ProgressiveImage({ src, alt, style }) {
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [userEmail, setUserEmail] = useState(() => localStorage.getItem("userEmail"));
+  const [userEmail, setUserEmail] = useState(() =>
+    localStorage.getItem("userEmail")
+  );
   const [view, setView] = useState("home");
-  const [isLogin, setIsLogin] = useState(true);
+
+  // Auth Modal State (Replaces the separate Auth Page)
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState("login"); // 'login' or 'signup'
+
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
     password: "",
   });
+  const [rememberMe, setRememberMe] = useState(false);
   const [message, setMessage] = useState("");
   const [hasAccess, setHasAccess] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -98,22 +95,13 @@ function App() {
   const [showContact, setShowContact] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [previousView, setPreviousView] = useState("home");
 
-  const theme = {
-    background: "#0d0c0b",
-    surface: "#1a1816",
-    accent: "#d4a373",
-    text: "#e6e1dd",
-    success: "#2ecc71",
-    error: "#e74c3c",
-    border: "#2b2824",
-  };
+  // Ref to scroll to info section
+  const infoSectionRef = useRef(null);
 
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
 
-  // FIX: Restore filteredResults logic
   const filteredResults = movies.filter(
     (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -123,6 +111,7 @@ function App() {
   );
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
+
   const showFeedback = (type, msg) => {
     setStatus({ type, message: msg });
     setTimeout(() => setStatus({ type: "", message: "" }), 5000);
@@ -138,7 +127,6 @@ function App() {
       const accessStatus = {};
       for (let movie of movies) {
         try {
-          // It was using API_BASE here, so it must be in the array below
           const res = await axios.post(
             `${API_BASE}/check-access`,
             { movieName: movie.name },
@@ -152,7 +140,7 @@ function App() {
       setHasAccess(accessStatus);
     };
     checkAllAccess();
-  }, [token, movies, API_BASE]); // <--- Added API_BASE here
+  }, [token, movies, API_BASE]);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -162,17 +150,19 @@ function App() {
     setIsProcessing(true);
     setMessage("");
     try {
-      const endpoint = isLogin ? "login" : "register";
+      const endpoint = authMode === "login" ? "login" : "register";
       const res = await axios.post(`${API_BASE}/${endpoint}`, formData);
-      if (isLogin) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("userEmail", formData.email);
+      if (authMode === "login") {
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem("token", res.data.token);
+        storage.setItem("userEmail", formData.email);
         setToken(res.data.token);
-        setUserEmail(formData.email); // ADDED THIS: Updates the UI immediately
+        setUserEmail(formData.email);
+        setShowAuthModal(false); // Close modal on success
         showFeedback("success", "Logged in successfully");
       } else {
         showFeedback("success", "Account created! Please log in.");
-        setIsLogin(true);
+        setAuthMode("login");
       }
     } catch (err) {
       const errMsg = err.response?.data?.message || "Authentication failed";
@@ -181,6 +171,24 @@ function App() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Smart Play Button Logic
+  const handleHeroPlay = () => {
+    if (!token) {
+      setAuthMode("login");
+      setShowAuthModal(true);
+      return;
+    }
+    if (hasAccess[selectedMovie.name]) {
+      setIsPlaying(true);
+    } else {
+      setShowPaymentModal(true);
+    }
+  };
+
+  const scrollToInfo = () => {
+    infoSectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const payWithPaystack = () => {
@@ -227,182 +235,65 @@ function App() {
     );
   };
 
-  const buttonStyle = (theme, type) => {
-    const base = {
-      padding: "16px",
-      borderRadius: "8px",
-      cursor: "pointer",
-      fontWeight: "bold",
-      width: "100%",
-      border: "none",
-      fontSize: "13px",
-      transition: "0.3s",
-      letterSpacing: "1px",
-    };
-    if (type === "primary")
-      return { ...base, backgroundColor: theme.accent, color: "#2b2118" };
-    if (type === "secondary")
-      return {
-        ...base,
-        backgroundColor: "transparent",
-        color: theme.accent,
-        border: `1px solid ${theme.accent}`,
-      };
-    if (type === "success")
-      return { ...base, backgroundColor: theme.success, color: "white" };
-    if (type === "ghost")
-      return {
-        ...base,
-        backgroundColor: "rgba(255,255,255,0.05)",
-        color: "#fff",
-        border: "1px solid #333",
-      };
-    return base;
-  };
-
   return (
-    <div
-      style={{
-        backgroundColor: theme.background,
-        minHeight: "100vh",
-        color: theme.text,
-        fontFamily: "Arial, sans-serif",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <style>{`
-        body, html { margin: 0 !important; padding: 0 !important; background-color: #0d0c0b !important; }
-        * { box-sizing: border-box; }
-        .nav-link { color: #888; text-decoration: none; font-size: 14px; cursor: pointer; transition: 0.2s; padding-bottom: 5px; border-bottom: 2px solid transparent; }
-        .nav-link:hover { color: #d4a373; }
-        .nav-link.active { color: #d4a373; border-bottom: 2px solid #d4a373; }
-        
-        footer a, footer .legal-btn { 
-          color: #666; 
-          text-decoration: none; 
-          font-size: 13px; 
-          transition: 0.2s; 
-          display: block; 
-          margin-bottom: 5px; 
-          cursor: pointer;
-          background: none;
-          border: none;
-          padding: 0;
-          font-family: inherit;
-        }
-        footer a:hover, footer .legal-btn:hover { color: #d4a373; }
-
-        .search-input { background: #0d0c0b; border: 1px solid #333; color: white; padding: 8px 35px 8px 15px; border-radius: 20px; outline: none; transition: 0.3s; width: 200px; font-size: 13px; }
-        .search-input:focus { border-color: #d4a373; width: 280px; }
-        .shimmer { background: linear-gradient(90deg, #1a1816 25%, #2b2824 50%, #1a1816 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
-        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-      `}</style>
-
+    <div className="app-container">
       {status.message && (
         <div
-          style={{
-            position: "fixed",
-            top: "20px",
-            right: "20px",
-            padding: "15px 25px",
-            borderRadius: "8px",
-            backgroundColor:
-              status.type === "success" ? theme.success : theme.error,
-            color: "white",
-            zIndex: 3000,
-            boxShadow: "0 4px 15px rgba(0,0,0,0.5)",
-            fontWeight: "bold",
-            animation: "slideIn 0.3s ease-out",
-          }}
+          className={`status-toast ${
+            status.type === "success" ? "status-success" : "status-error"
+          }`}
         >
           {status.type === "success" ? "✓ " : "✕ "} {status.message}
         </div>
       )}
 
-      {token ? (
-        <>
-          <nav style={navStyle(theme)}>
-            <div style={{ display: "flex", alignItems: "center", gap: "40px" }}>
-              <h2
-                onClick={() => {
-                  setView("home");
-                  setSearchQuery("");
-                }}
-                style={{
-                  color: theme.accent,
-                  margin: 0,
-                  fontSize: "24px",
-                  letterSpacing: "2px",
-                  cursor: "pointer",
-                }}
-              >
-                BLACKWELL
-              </h2>
-              <div style={{ display: "flex", gap: "25px" }}>
+      {/* NAVIGATION: Visible to everyone now */}
+      <nav className="nav-bar">
+        <div className="nav-left">
+          <h2
+            className="nav-logo"
+            onClick={() => {
+              setView("home");
+              setSearchQuery("");
+            }}
+          >
+            BLACKWELL
+          </h2>
+          {token && (
+            <div className="nav-links">
+              {["home", "movies", "shows", "watchlist"].map((page) => (
                 <span
+                  key={page}
                   className={`nav-link ${
-                    view === "home" && !searchQuery ? "active" : ""
+                    view === page && !searchQuery ? "active" : ""
                   }`}
                   onClick={() => {
-                    setView("home");
+                    setView(page);
                     setSearchQuery("");
                   }}
                 >
-                  Home
+                  {page.charAt(0).toUpperCase() + page.slice(1)}
                 </span>
-                <span
-                  className={`nav-link ${view === "movies" ? "active" : ""}`}
-                  onClick={() => {
-                    setView("movies");
-                    setSearchQuery("");
-                  }}
-                >
-                  Movies
-                </span>
-                <span
-                  className={`nav-link ${view === "shows" ? "active" : ""}`}
-                  onClick={() => {
-                    setView("shows");
-                    setSearchQuery("");
-                  }}
-                >
-                  Shows
-                </span>
-                <span
-                  className={`nav-link ${view === "watchlist" ? "active" : ""}`}
-                  onClick={() => {
-                    setView("watchlist");
-                    setSearchQuery("");
-                  }}
-                >
-                  Watchlist
-                </span>
-              </div>
+              ))}
             </div>
+          )}
+        </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-              <div style={{ position: "relative" }}>
+        <div className="nav-right">
+          {token ? (
+            <>
+              <div className="search-wrapper">
                 <input
                   type="text"
-                  placeholder="Search titles, actors..."
+                  placeholder="Search..."
                   className="search-input"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery && (
                   <span
+                    className="search-clear"
                     onClick={() => setSearchQuery("")}
-                    style={{
-                      position: "absolute",
-                      right: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      cursor: "pointer",
-                      color: "#666",
-                      fontSize: "12px",
-                    }}
                   >
                     ✕
                   </span>
@@ -414,34 +305,442 @@ function App() {
                   setView("profile");
                   setSearchQuery("");
                 }}
+                style={{ marginRight: "20px" }}
               >
                 Profile
               </span>
               <button
                 onClick={() => {
                   localStorage.clear();
+                  sessionStorage.clear();
                   setToken(null);
+                  setView("home");
                 }}
-                style={logoutButtonStyle}
+                className="btn-logout"
               >
                 Logout
               </button>
+            </>
+          ) : (
+            // Public Options
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => {
+                  setAuthMode("login");
+                  setShowAuthModal(true);
+                }}
+                className="btn btn-ghost btn-sm"
+                style={{ border: "none" }}
+              >
+                Login
+              </button>
+              <button
+                onClick={() => {
+                  setAuthMode("signup");
+                  setShowAuthModal(true);
+                }}
+                className="btn btn-primary btn-sm"
+              >
+                Sign Up
+              </button>
             </div>
-          </nav>
+          )}
+        </div>
+      </nav>
 
-          <div style={{ flex: 1, padding: "60px 5%" }}>
-            {searchQuery && (
-              <div style={centeredContainer}>
-                <h2
+      <div className="main-content">
+        {searchQuery && (
+          <div className="centered-container">
+            <h2
+              style={{
+                marginBottom: "30px",
+                fontWeight: "300",
+                letterSpacing: "1px",
+              }}
+            >
+              RESULTS FOR "{searchQuery.toUpperCase()}"
+            </h2>
+            {filteredResults.length > 0 ? (
+              <div className="movie-grid">
+                {filteredResults.map((item) => (
+                  <div
+                    key={item.id}
+                    className="movie-card"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "15px",
+                      gap: "20px",
+                    }}
+                  >
+                    <div style={{ width: "80px" }}>
+                      <ProgressiveImage
+                        src={item.image}
+                        alt={item.name}
+                        style={{ borderRadius: "4px" }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: "0 0 5px 0" }}>{item.name}</h4>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--accent-color)",
+                          letterSpacing: "1px",
+                        }}
+                      >
+                        {item.type.toUpperCase()}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedMovie(item);
+                        setView("movie-detail");
+                        setSearchQuery("");
+                      }}
+                      className="btn btn-primary btn-sm"
+                    >
+                      VIEW
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p
+                style={{
+                  color: "#555",
+                  textAlign: "center",
+                  marginTop: "40px",
+                }}
+              >
+                No content found matching your search.
+              </p>
+            )}
+          </div>
+        )}
+
+        {!searchQuery && (
+          <>
+            {view === "home" && (
+              <div>
+                {/* Hero Section - End to End Horizontally */}
+                <div className="hero-wrapper">
+                  <div className="play-overlay-btn" onClick={handleHeroPlay}>
+                    <span className="play-icon">▶</span>
+                  </div>
+                  <ProgressiveImage
+                    src={MOVIE_DATA[0].landscapeImage || MOVIE_DATA[0].image}
+                    alt={MOVIE_DATA[0].name}
+                    className="hero-image"
+                  />
+                </div>
+
+                {/* Content Container below image */}
+                <div className="centered-container-lg">
+                  <div className="hero-content">
+                    <h2 style={{ color: "var(--accent-color)", margin: 0 }}>
+                      {MOVIE_DATA[0].name}
+                    </h2>
+                    <span
+                      className={`badge ${
+                        hasAccess[MOVIE_DATA[0].name] ? "badge-owned" : ""
+                      }`}
+                    >
+                      {hasAccess[MOVIE_DATA[0].name]
+                        ? "OWNED"
+                        : `KES ${MOVIE_DATA[0].price}`}
+                    </span>
+                  </div>
+
+                  <div className="hero-actions">
+                    <button
+                      onClick={() =>
+                        setActiveTrailer(MOVIE_DATA[0].trailerLink)
+                      }
+                      className="btn btn-secondary"
+                    >
+                      VIEW TRAILER
+                    </button>
+
+                    {hasAccess[MOVIE_DATA[0].name] ? (
+                      <button
+                        onClick={() => {
+                          setSelectedMovie(MOVIE_DATA[0]);
+                          setIsPlaying(true);
+                        }}
+                        className="btn btn-success"
+                      >
+                        ▶ WATCH NOW
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSelectedMovie(MOVIE_DATA[0]);
+                          if (!token) {
+                            setAuthMode("login");
+                            setShowAuthModal(true);
+                          } else {
+                            setShowPaymentModal(true);
+                          }
+                        }}
+                        className="btn btn-primary"
+                      >
+                        BUY 3-MONTH ACCESS
+                      </button>
+                    )}
+
+                    <button onClick={scrollToInfo} className="btn btn-ghost">
+                      VIEW INFO
+                    </button>
+                  </div>
+
+                  {/* Movie Info Section - Visible on Scroll */}
+                  <div className="home-movie-info" ref={infoSectionRef}>
+                    <div className="detail-grid">
+                      <div>
+                        <h3 style={{ color: "var(--accent-color)" }}>
+                          SYNOPSIS
+                        </h3>
+                        <p className="detail-desc">
+                          {MOVIE_DATA[0].description}
+                        </p>
+                      </div>
+                      <div className="detail-meta">
+                        <div className="meta-row">
+                          <span className="meta-label">GENRE:</span>{" "}
+                          {MOVIE_DATA[0].genre}
+                        </div>
+                        <div className="meta-row">
+                          <span className="meta-label">DIRECTOR:</span>{" "}
+                          {MOVIE_DATA[0].director}
+                        </div>
+                        <div className="meta-row">
+                          <span className="meta-label">CAST:</span>{" "}
+                          {MOVIE_DATA[0].cast.join(", ")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {view === "movie-detail" && (
+              <div className="detail-container">
+                <button onClick={() => setView("home")} className="btn-back">
+                  ← BACK TO MOVIES
+                </button>
+                <div className="detail-grid">
+                  <div className="detail-poster">
+                    <ProgressiveImage
+                      src={selectedMovie.image}
+                      alt={selectedMovie.name}
+                    />
+                  </div>
+                  <div>
+                    <h1 className="detail-title">{selectedMovie.name}</h1>
+                    <p className="detail-desc">{selectedMovie.description}</p>
+
+                    <div className="detail-meta">
+                      <div className="meta-row">
+                        <span className="meta-label">GENRE:</span>{" "}
+                        {selectedMovie.genre}
+                      </div>
+                      <div className="meta-row">
+                        <span className="meta-label">DIRECTOR:</span>{" "}
+                        {selectedMovie.director}
+                      </div>
+                      <div className="meta-row">
+                        <span className="meta-label">CAST:</span>{" "}
+                        {selectedMovie.cast.join(", ")}
+                      </div>
+                    </div>
+
+                    <div className="detail-actions">
+                      {hasAccess[selectedMovie.name] ? (
+                        <button
+                          onClick={() => setIsPlaying(true)}
+                          className="btn btn-success"
+                        >
+                          WATCH NOW
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setShowPaymentModal(true)}
+                          className="btn btn-primary"
+                        >
+                          BUY ACCESS
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          setActiveTrailer(selectedMovie.trailerLink)
+                        }
+                        className="btn btn-secondary"
+                      >
+                        VIEW TRAILER
+                      </button>
+                      <button
+                        onClick={() => toggleWatchlist(selectedMovie.name)}
+                        className="btn btn-ghost"
+                      >
+                        {watchlist.includes(selectedMovie.name)
+                          ? "✓ IN WATCHLIST"
+                          : "+ WATCHLIST"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {view === "movies" && (
+              <div className="centered-container">
+                <h1
                   style={{
-                    marginBottom: "30px",
+                    textAlign: "center",
+                    marginBottom: "40px",
                     fontWeight: "300",
-                    letterSpacing: "1px",
+                    letterSpacing: "2px",
                   }}
                 >
-                  RESULTS FOR "{searchQuery.toUpperCase()}"
-                </h2>
-                {filteredResults.length > 0 ? (
+                  MOVIES
+                </h1>
+                <div className="movie-grid">
+                  {movies.map((movie) => (
+                    <div key={movie.id} className="movie-card">
+                      <ProgressiveImage src={movie.image} alt={movie.name} />
+                      <div className="card-content">
+                        <h3 style={{ margin: 0 }}>{movie.name}</h3>
+                        <button
+                          onClick={() => {
+                            setSelectedMovie(movie);
+                            setView("movie-detail");
+                          }}
+                          className="btn btn-primary btn-sm"
+                        >
+                          VIEW INFO
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {view === "shows" && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "60vh",
+                }}
+              >
+                <h1
+                  style={{
+                    color: "var(--accent-color)",
+                    fontSize: "4rem",
+                    fontWeight: "900",
+                    letterSpacing: "5px",
+                  }}
+                >
+                  COMING SOON
+                </h1>
+              </div>
+            )}
+
+            {view === "watchlist" && (
+              <div className="centered-container">
+                <h1
+                  style={{
+                    textAlign: "center",
+                    marginBottom: "40px",
+                    fontWeight: "300",
+                    letterSpacing: "2px",
+                  }}
+                >
+                  MY WATCHLIST
+                </h1>
+                {watchlist.length > 0 ? (
+                  watchlist.map((movieName) => (
+                    <div
+                      key={movieName}
+                      className="movie-card"
+                      style={{
+                        padding: "20px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "15px",
+                      }}
+                    >
+                      <h3 style={{ margin: 0 }}>{movieName}</h3>
+                      <div style={{ display: "flex", gap: "10px" }}>
+                        <button
+                          onClick={() => {
+                            const m = movies.find((x) => x.name === movieName);
+                            if (m) setSelectedMovie(m);
+                            setView("movie-detail");
+                          }}
+                          className="btn btn-primary btn-sm"
+                        >
+                          VIEW
+                        </button>
+                        <button
+                          onClick={() => toggleWatchlist(movieName)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ff6b6b",
+                            cursor: "pointer",
+                            fontSize: "18px",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ textAlign: "center", color: "#555" }}>
+                    Your list is empty.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {view === "profile" && (
+              <div className="profile-container">
+                <h1 style={{ marginBottom: "40px", fontWeight: "300" }}>
+                  Account Dashboard
+                </h1>
+                <div className="profile-grid">
+                  <div className="profile-card profile-card-center">
+                    <div className="avatar-circle">
+                      {userEmail?.charAt(0).toUpperCase()}
+                    </div>
+                    <h4 style={{ margin: "0 0 5px 0" }}>Member</h4>
+                    <p
+                      style={{
+                        fontSize: "12px",
+                        color: "#666",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      {userEmail}
+                    </p>
+                    <button
+                      onClick={() => {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        setToken(null);
+                      }}
+                      className="btn-logout"
+                    >
+                      Logout Session
+                    </button>
+                  </div>
                   <div
                     style={{
                       display: "flex",
@@ -449,670 +748,157 @@ function App() {
                       gap: "20px",
                     }}
                   >
-                    {filteredResults.map((item) => (
-                      <div
-                        key={item.id}
+                    <div className="profile-card">
+                      <h3
                         style={{
-                          ...cardStyle(theme),
-                          display: "flex",
-                          alignItems: "center",
-                          padding: "15px",
-                          gap: "20px",
+                          fontSize: "14px",
+                          color: "var(--accent-color)",
+                          marginTop: 0,
+                          textTransform: "uppercase",
                         }}
                       >
-                        <div style={{ width: "80px" }}>
-                          <ProgressiveImage
-                            src={item.image}
-                            alt={item.name}
-                            style={{ width: "100%", borderRadius: "4px" }}
-                          />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <h4 style={{ margin: "0 0 5px 0" }}>{item.name}</h4>
-                          <span
-                            style={{
-                              fontSize: "11px",
-                              color: theme.accent,
-                              letterSpacing: "1px",
-                            }}
-                          >
-                            {item.type.toUpperCase()}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedMovie(item);
-                            setView("movie-detail");
-                            setSearchQuery("");
-                          }}
-                          style={{
-                            ...buttonStyle(theme, "primary"),
-                            width: "auto",
-                            padding: "8px 15px",
-                          }}
-                        >
-                          VIEW
-                        </button>
+                        Purchased Content
+                      </h3>
+                      <div style={{ marginTop: "20px" }}>
+                        {Object.keys(hasAccess).some(
+                          (key) => hasAccess[key]
+                        ) ? (
+                          movies
+                            .filter((m) => hasAccess[m.name])
+                            .map((m) => (
+                              <div key={m.id} className="purchased-item">
+                                <span style={{ fontWeight: "bold" }}>
+                                  {m.name}
+                                </span>
+                                <span className="badge-full-access">
+                                  FULL ACCESS
+                                </span>
+                              </div>
+                            ))
+                        ) : (
+                          <p style={{ color: "#555", fontSize: "14px" }}>
+                            No active movie passes found.
+                          </p>
+                        )}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                ) : (
-                  <p
-                    style={{
-                      color: "#555",
-                      textAlign: "center",
-                      marginTop: "40px",
-                    }}
-                  >
-                    No content found matching your search.
-                  </p>
-                )}
+                </div>
               </div>
             )}
+          </>
+        )}
+      </div>
 
-            {!searchQuery && (
-              <>
-                {view === "home" && (
-                  <div>
-                    {" "}
-                    {/* Removed centeredContainer from here */}
-                    <header
-                      style={{ marginBottom: "50px", textAlign: "center" }}
-                    >
-                      <h1
-                        style={{
-                          fontSize: "1.8rem",
-                          letterSpacing: "4px",
-                          color: "#fff",
-                          fontWeight: "300",
-                        }}
-                      >
-                        FEATURED FILM
-                      </h1>
-                    </header>
-                    <div style={{ width: "100%", position: "relative" }}>
-                      <ProgressiveImage
-                        src={
-                          MOVIE_DATA[0].landscapeImage || MOVIE_DATA[0].image
-                        }
-                        alt={MOVIE_DATA[0].name}
-                        style={{
-                          width: "100vw",           // Full width on mobile
-                            maxWidth: "1200px",       // Stops it from becoming "too big" on laptops
-                            position: "relative",
-                            left: "50%",
-                            transform: "translateX(-50%)", // Perfectly centers the image even when wide
-                            height: "auto",
-                            aspectRatio: "16 / 9",
-                            objectFit: "cover",
-                            display: "block",
-                            borderRadius: "0px",
-                        }}
-                      />
-
-                      {/* Wrap ONLY the text and buttons in the centered container */}
-                      <div style={{ ...centeredContainer, maxWidth: "1200px", padding: "30px 5%" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "20px",
-                          }}
-                        >
-                          <h2 style={{ color: theme.accent, margin: 0 }}>
-                            {MOVIE_DATA[0].name}
-                          </h2>
-                          <span
-                            style={badgeStyle(
-                              theme,
-                              hasAccess[MOVIE_DATA[0].name]
-                            )}
-                          >
-                            {hasAccess[MOVIE_DATA[0].name]
-                              ? "OWNED"
-                              : `KES ${MOVIE_DATA[0].price}`}
-                          </span>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "12px",
-                          }}
-                        >
-                          <button
-                            onClick={() =>
-                              setActiveTrailer(MOVIE_DATA[0].trailerLink)
-                            }
-                            style={buttonStyle(theme, "secondary")}
-                          >
-                            VIEW TRAILER
-                          </button>
-
-                          {hasAccess[MOVIE_DATA[0].name] ? (
-                            <button
-                              onClick={() => {
-                                setSelectedMovie(MOVIE_DATA[0]);
-                                setIsPlaying(true);
-                              }}
-                              style={buttonStyle(theme, "success")}
-                            >
-                              ▶ WATCH NOW
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setSelectedMovie(MOVIE_DATA[0]);
-                                setShowPaymentModal(true);
-                              }}
-                              style={buttonStyle(theme, "primary")}
-                            >
-                              BUY 3-MONTH ACCESS
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => {
-                              setPreviousView("home");
-                              setSelectedMovie(MOVIE_DATA[0]);
-                              setView("movie-detail");
-                            }}
-                            style={buttonStyle(theme, "ghost")}
-                          >
-                            VIEW INFO
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {view === "movie-detail" && (
-                  <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-                    <button
-                      onClick={() => setView(previousView)}
-                      style={{
-                        color: theme.accent,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        marginBottom: "20px",
-                        fontSize: "12px",
-                        letterSpacing: "1px",
-                      }}
-                    >
-                      ← BACK TO MOVIES
-                    </button>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1.5fr",
-                        gap: "40px",
-                      }}
-                    >
-                      <div style={{ borderRadius: "12px", overflow: "hidden" }}>
-                        <ProgressiveImage
-                          src={selectedMovie.image}
-                          alt={selectedMovie.name}
-                          style={{ width: "100%", height: "auto" }}
-                        />
-                      </div>
-                      <div>
-                        <h1 style={{ fontSize: "3rem", margin: "0 0 10px 0" }}>
-                          {selectedMovie.name}
-                        </h1>
-                        <p style={{ lineHeight: "1.8", color: "#bbb" }}>
-                          {selectedMovie.description}
-                        </p>
-                        <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                          <div style={{ fontSize: "14px" }}>
-                            <span style={{ color: theme.accent, fontWeight: "bold" }}>GENRE:</span> {selectedMovie.genre}
-                          </div>
-                          <div style={{ fontSize: "14px" }}>
-                            <span style={{ color: theme.accent, fontWeight: "bold" }}>DIRECTOR:</span> {selectedMovie.director}
-                          </div>
-                          <div style={{ fontSize: "14px" }}>
-                            <span style={{ color: theme.accent, fontWeight: "bold" }}>CAST:</span> {selectedMovie.cast.join(", ")}
-                          </div>
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "12px",
-                            marginTop: "30px",
-                          }}
-                        >
-                          {hasAccess[selectedMovie.name] ? (
-                            <button
-                              onClick={() => setIsPlaying(true)}
-                              style={buttonStyle(theme, "success")}
-                            >
-                              WATCH NOW
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setShowPaymentModal(true)}
-                              style={buttonStyle(theme, "primary")}
-                            >
-                              BUY ACCESS
-                            </button>
-                          )}
-                          <button
-                            onClick={() =>
-                              setActiveTrailer(selectedMovie.trailerLink)
-                            }
-                            style={buttonStyle(theme, "secondary")}
-                          >
-                            VIEW TRAILER
-                          </button>
-                          <button
-                            onClick={() => toggleWatchlist(selectedMovie.name)}
-                            style={buttonStyle(theme, "ghost")}
-                          >
-                            {watchlist.includes(selectedMovie.name)
-                              ? "✓ IN WATCHLIST"
-                              : "+ WATCHLIST"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {view === "movies" && (
-                  <div style={centeredContainer}>
-                    <h1
-                      style={{
-                        textAlign: "center",
-                        marginBottom: "40px",
-                        fontWeight: "300",
-                        letterSpacing: "2px",
-                      }}
-                    >
-                      MOVIES
-                    </h1>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "30px",
-                      }}
-                    >
-                      {movies.map((movie) => (
-                        <div key={movie.id} style={cardStyle(theme)}>
-                          <ProgressiveImage
-                            src={movie.image}
-                            alt={movie.name}
-                            style={{ width: "100%", height: "auto" }}
-                          />
-                          <div
-                            style={{
-                              padding: "20px",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <h3 style={{ margin: 0 }}>{movie.name}</h3>
-                            <button
-                              onClick={() => {
-                                setSelectedMovie(movie);
-                                setView("movie-detail");
-                              }}
-                              style={{
-                                ...buttonStyle(theme, "primary"),
-                                width: "auto",
-                                padding: "10px 20px",
-                              }}
-                            >
-                              VIEW INFO
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {view === "shows" && (
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      height: "60vh",
-                    }}
-                  >
-                    <h1
-                      style={{
-                        color: theme.accent,
-                        fontSize: "4rem",
-                        fontWeight: "900",
-                        letterSpacing: "5px",
-                      }}
-                    >
-                      COMING SOON
-                    </h1>
-                  </div>
-                )}
-
-                {view === "watchlist" && (
-                  <div style={centeredContainer}>
-                    <h1
-                      style={{
-                        textAlign: "center",
-                        marginBottom: "40px",
-                        fontWeight: "300",
-                        letterSpacing: "2px",
-                      }}
-                    >
-                      MY WATCHLIST
-                    </h1>
-                    {watchlist.length > 0 ? (
-                      watchlist.map((movieName) => (
-                        <div
-                          key={movieName}
-                          style={{
-                            ...cardStyle(theme),
-                            padding: "20px",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "15px",
-                          }}
-                        >
-                          <h3 style={{ margin: 0 }}>{movieName}</h3>
-                          <div style={{ display: "flex", gap: "10px" }}>
-                            <button
-                              onClick={() => {
-                                const m = movies.find(
-                                  (x) => x.name === movieName
-                                );
-                                if (m) setSelectedMovie(m);
-                                setView("movie-detail");
-                              }}
-                              style={{
-                                ...buttonStyle(theme, "primary"),
-                                width: "auto",
-                                padding: "10px 20px",
-                              }}
-                            >
-                              VIEW
-                            </button>
-                            <button
-                              onClick={() => toggleWatchlist(movieName)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                color: "#ff6b6b",
-                                cursor: "pointer",
-                                fontSize: "18px",
-                              }}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p style={{ textAlign: "center", color: "#555" }}>
-                        Your list is empty.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {view === "profile" && (
-                  <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-                    <h1 style={{ marginBottom: "40px", fontWeight: "300" }}>
-                      Account Dashboard
-                    </h1>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "260px 1fr",
-                        gap: "30px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          backgroundColor: theme.surface,
-                          borderRadius: "12px",
-                          padding: "30px",
-                          height: "fit-content",
-                          border: `1px solid ${theme.border}`,
-                          textAlign: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "70px",
-                            height: "70px",
-                            backgroundColor: theme.accent,
-                            borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "28px",
-                            color: "#2b2118",
-                            margin: "0 auto 20px auto",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {userEmail?.charAt(0).toUpperCase()}
-                        </div>
-                        <h4 style={{ margin: "0 0 5px 0" }}>Member</h4>
-                        <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
-                          {userEmail}
-                        </p>
-                        <button
-                          onClick={() => {
-                            localStorage.clear();
-                            setToken(null);
-                          }}
-                          style={{
-                            ...buttonStyle(theme, "ghost"),
-                            color: "#ff6b6b",
-                          }}
-                        >
-                          Logout Session
-                        </button>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "20px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            backgroundColor: theme.surface,
-                            padding: "30px",
-                            borderRadius: "12px",
-                            border: `1px solid ${theme.border}`,
-                          }}
-                        >
-                          <h3
-                            style={{
-                              fontSize: "14px",
-                              color: theme.accent,
-                              marginTop: 0,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Purchased Content
-                          </h3>
-                          <div style={{ marginTop: "20px" }}>
-                            {Object.keys(hasAccess).some(
-                              (key) => hasAccess[key]
-                            ) ? (
-                              movies
-                                .filter((m) => hasAccess[m.name])
-                                .map((m) => (
-                                  <div
-                                    key={m.id}
-                                    style={{
-                                      padding: "15px",
-                                      backgroundColor: "#0d0c0b",
-                                      borderRadius: "8px",
-                                      marginBottom: "10px",
-                                      display: "flex",
-                                      justifyContent: "space-between",
-                                      alignItems: "center",
-                                      border: "1px solid #222",
-                                    }}
-                                  >
-                                    <span style={{ fontWeight: "bold" }}>
-                                      {m.name}
-                                    </span>
-                                    <span
-                                      style={{
-                                        fontSize: "10px",
-                                        color: theme.success,
-                                        fontWeight: "bold",
-                                        border: `1px solid ${theme.success}`,
-                                        padding: "4px 8px",
-                                        borderRadius: "4px",
-                                      }}
-                                    >
-                                      FULL ACCESS
-                                    </span>
-                                  </div>
-                                ))
-                            ) : (
-                              <p style={{ color: "#555", fontSize: "14px" }}>
-                                No active movie passes found.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
+      <footer className="app-footer">
+        <div className="footer-grid">
+          <div>
+            <h4 className="footer-brand">BLACKWELL</h4>
           </div>
-
-          <footer style={footerStyle(theme)}>
-            <div style={footerGrid}>
-              <div>
-                <h4
-                  style={{
-                    color: theme.accent,
-                    margin: "0 0 10px 0",
-                    fontSize: "18px",
-                  }}
-                >
-                  BLACKWELL
-                </h4>
-              </div>
-              <div>
-                <h5 style={footerHead}>Support</h5>
-                <span
-                  className="legal-btn"
-                  onClick={() => setLegalView("terms")}
-                >
-                  Terms of Service
-                </span>
-                <span
-                  className="legal-btn"
-                  onClick={() => setLegalView("privacy")}
-                >
-                  Privacy Policy
-                </span>
-                <span
-                  className="legal-btn"
-                  onClick={() => setShowContact(true)}
-                >
-                  Contact Us
-                </span>
-              </div>
-              <div>
-                <h5 style={footerHead}>Connect</h5>
-                <a
-                  href="https://www.tiktok.com/@blackwellfilms?lang=en"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  TikTok
-                </a>
-                <a
-                  href="https://www.instagram.com/blackwell_films/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Instagram
-                </a>
-                <a
-                  href="https://www.facebook.com/Blackwellfilms"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Facebook
-                </a>
-              </div>
-            </div>
-          </footer>
-        </>
-      ) : (
-        <div style={authContainer}>
-          {/* This new div centers the logo and the card together */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "20px",
-            }}
-          >
-            <h1
-              style={{
-                color: theme.accent,
-                margin: 0,
-                fontSize: "42px",
-                letterSpacing: "4px",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
+          <div>
+            <h5 className="footer-head">Support</h5>
+            <button
+              className="footer-link"
+              onClick={() => setLegalView("terms")}
             >
-              BLACKWELL
-            </h1>
-            <div style={authCard(theme)}>
+              Terms of Service
+            </button>
+            <button
+              className="footer-link"
+              onClick={() => setLegalView("privacy")}
+            >
+              Privacy Policy
+            </button>
+            <button
+              className="footer-link"
+              onClick={() => setShowContact(true)}
+            >
+              Contact Us
+            </button>
+          </div>
+          <div>
+            <h5 className="footer-head">Connect</h5>
+            <a
+              href="https://www.tiktok.com/@blackwellfilms?lang=en"
+              target="_blank"
+              rel="noreferrer"
+              className="footer-link"
+            >
+              TikTok
+            </a>
+            <a
+              href="https://www.instagram.com/blackwell_films/"
+              target="_blank"
+              rel="noreferrer"
+              className="footer-link"
+            >
+              Instagram
+            </a>
+            <a
+              href="https://www.facebook.com/Blackwellfilms"
+              target="_blank"
+              rel="noreferrer"
+              className="footer-link"
+            >
+              Facebook
+            </a>
+          </div>
+        </div>
+      </footer>
+
+      {/* MODALS */}
+
+      {/* AUTH MODAL - Replaces old Login Page */}
+      {showAuthModal && (
+        <div className="modal-overlay">
+          <div className="auth-wrapper">
+            <div className="auth-card" style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                style={{
+                  position: "absolute",
+                  top: "15px",
+                  right: "15px",
+                  background: "none",
+                  border: "none",
+                  color: "#666",
+                  cursor: "pointer",
+                  fontSize: "18px",
+                }}
+              >
+                ✕
+              </button>
+              <h1
+                className="auth-logo"
+                style={{ fontSize: "28px", marginBottom: "20px" }}
+              >
+                BLACKWELL
+              </h1>
               <h2
                 style={{
                   textAlign: "center",
-                  color: theme.accent,
+                  color: "var(--accent-color)",
                   marginTop: 0,
                 }}
               >
-                {isLogin ? "Login" : "Sign Up"}
+                {authMode === "login" ? "Login" : "Sign Up"}
               </h2>
-              <form
-                onSubmit={handleSubmit}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "15px",
-                }}
-              >
-                {!isLogin && (
+              <form onSubmit={handleSubmit} className="auth-form">
+                {authMode === "signup" && (
                   <input
                     name="full_name"
                     placeholder="Full Name"
                     onChange={handleChange}
-                    style={inputStyle(theme)}
+                    className="auth-input"
+                    required
                   />
                 )}
                 <input
                   name="email"
+                  type="email"
                   placeholder="Email"
                   onChange={handleChange}
-                  style={inputStyle(theme)}
+                  className="auth-input"
                   required
                 />
                 <input
@@ -1120,20 +906,37 @@ function App() {
                   type="password"
                   placeholder="Password"
                   onChange={handleChange}
-                  style={inputStyle(theme)}
+                  className="auth-input"
                   required
                 />
+
+                {authMode === "login" && (
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                    Remember Me
+                  </label>
+                )}
+
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  style={{
-                    ...buttonStyle(theme, "primary"),
-                    opacity: isProcessing ? 0.6 : 1,
-                  }}
+                  className="btn btn-primary"
                 >
                   {isProcessing
                     ? "PROCESSING..."
-                    : isLogin
+                    : authMode === "login"
                     ? "Login"
                     : "Create Account"}
                 </button>
@@ -1141,7 +944,7 @@ function App() {
               {message && (
                 <p
                   style={{
-                    color: theme.accent,
+                    color: "var(--accent-color)",
                     textAlign: "center",
                     fontSize: "14px",
                     marginTop: "10px",
@@ -1151,29 +954,27 @@ function App() {
                 </p>
               )}
               <p
-                onClick={() => setIsLogin(!isLogin)}
-                style={{
-                  textAlign: "center",
-                  cursor: "pointer",
-                  color: theme.accent,
-                  fontSize: "14px",
-                  marginTop: "15px",
-                }}
+                onClick={() =>
+                  setAuthMode(authMode === "login" ? "signup" : "login")
+                }
+                className="auth-toggle"
               >
-                {isLogin ? "Sign Up" : "Back to Login"}
+                {authMode === "login"
+                  ? "Need an account? Sign Up"
+                  : "Have an account? Login"}
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODALS */}
       {showContact && (
-        <div style={modalOverlayStyle}>
+        <div className="modal-overlay">
           <div
-            style={{ ...authCard(theme), width: "400px", textAlign: "center" }}
+            className="auth-card"
+            style={{ width: "400px", textAlign: "center" }}
           >
-            <h2 style={{ color: theme.accent, marginBottom: "20px" }}>
+            <h2 style={{ color: "var(--accent-color)", marginBottom: "20px" }}>
               CONTACT US
             </h2>
             <div style={{ marginBottom: "25px" }}>
@@ -1198,7 +999,7 @@ function App() {
             </div>
             <button
               onClick={() => setShowContact(false)}
-              style={buttonStyle(theme, "primary")}
+              className="btn btn-primary"
             >
               CLOSE
             </button>
@@ -1207,8 +1008,11 @@ function App() {
       )}
 
       {isPlaying && (
-        <div style={theaterOverlayStyle}>
-          <button onClick={() => setIsPlaying(false)} style={closeTheaterStyle}>
+        <div className="theater-overlay">
+          <button
+            onClick={() => setIsPlaying(false)}
+            className="btn-close-theater"
+          >
             ✕ CLOSE
           </button>
           <div
@@ -1234,10 +1038,10 @@ function App() {
       )}
 
       {activeTrailer && (
-        <div style={theaterOverlayStyle}>
+        <div className="theater-overlay">
           <button
             onClick={() => setActiveTrailer(null)}
-            style={closeTheaterStyle}
+            className="btn-close-theater"
           >
             ✕ CLOSE TRAILER
           </button>
@@ -1269,9 +1073,9 @@ function App() {
       )}
 
       {showPaymentModal && (
-        <div style={modalOverlayStyle}>
-          <div style={authCard(theme)}>
-            <h2 style={{ color: theme.accent, textAlign: "center" }}>
+        <div className="modal-overlay">
+          <div className="auth-card">
+            <h2 style={{ color: "var(--accent-color)", textAlign: "center" }}>
               Checkout
             </h2>
             <p style={{ textAlign: "center", marginBottom: "20px" }}>
@@ -1280,10 +1084,7 @@ function App() {
             <button
               onClick={payWithPaystack}
               disabled={isProcessing}
-              style={{
-                ...buttonStyle(theme, "primary"),
-                opacity: isProcessing ? 0.6 : 1,
-              }}
+              className="btn btn-primary"
             >
               {isProcessing ? "VERIFYING..." : `PAY KES ${selectedMovie.price}`}
             </button>
@@ -1305,18 +1106,14 @@ function App() {
       )}
 
       {legalView && (
-        <div style={modalOverlayStyle}>
+        <div className="modal-overlay">
           <div
-            style={{
-              ...authCard(theme),
-              width: "500px",
-              maxHeight: "80vh",
-              overflowY: "auto",
-            }}
+            className="auth-card"
+            style={{ width: "500px", maxHeight: "80vh", overflowY: "auto" }}
           >
             <h2
               style={{
-                color: theme.accent,
+                color: "var(--accent-color)",
                 textAlign: "center",
                 textTransform: "uppercase",
               }}
@@ -1336,7 +1133,7 @@ function App() {
             </div>
             <button
               onClick={() => setLegalView(null)}
-              style={buttonStyle(theme, "primary")}
+              className="btn btn-primary"
             >
               CLOSE
             </button>
@@ -1346,112 +1143,5 @@ function App() {
     </div>
   );
 }
-
-// STYLES
-const navStyle = (theme) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: "20px 5%",
-  backgroundColor: theme.surface,
-  borderBottom: `1px solid ${theme.border}`,
-  position: "sticky",
-  top: 0,
-  zIndex: 100,
-});
-const centeredContainer = { maxWidth: "480px", margin: "0 auto" };
-const cardStyle = (theme) => ({
-  backgroundColor: theme.surface,
-  borderRadius: "12px",
-  overflow: "hidden",
-  border: `1px solid ${theme.border}`,
-});
-const badgeStyle = (theme, active) => ({
-  padding: "6px 12px",
-  borderRadius: "4px",
-  fontSize: "11px",
-  fontWeight: "bold",
-  backgroundColor: active ? theme.success : "#333",
-  color: "white",
-});
-const authContainer = {
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  minHeight: "100vh",
-};
-const authCard = (theme) => ({
-  backgroundColor: theme.surface,
-  padding: "40px",
-  borderRadius: "12px",
-  width: "380px",
-  border: `1px solid ${theme.border}`,
-});
-const inputStyle = (theme) => ({
-  padding: "14px",
-  backgroundColor: "#0d0c0b",
-  border: "1px solid #333",
-  borderRadius: "8px",
-  color: "#fff",
-  width: "100%",
-});
-const logoutButtonStyle = {
-  background: "transparent",
-  color: "#ff6b6b",
-  border: "1px solid #422",
-  padding: "6px 15px",
-  borderRadius: "5px",
-  cursor: "pointer",
-  fontSize: "12px",
-};
-const footerStyle = (theme) => ({
-  backgroundColor: theme.surface,
-  padding: "60px 5% 40px 5%",
-  borderTop: `1px solid ${theme.border}`,
-  marginTop: "auto",
-});
-const footerGrid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-  gap: "30px",
-  maxWidth: "1200px",
-  margin: "0 auto",
-};
-const footerHead = { margin: "0 0 10px 0", fontSize: "14px", color: "#888" };
-const modalOverlayStyle = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  backgroundColor: "rgba(0,0,0,0.9)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 1000,
-};
-const theaterOverlayStyle = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100vw",
-  height: "100vh",
-  backgroundColor: "rgba(0,0,0,0.95)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 2000,
-};
-const closeTheaterStyle = {
-  position: "absolute",
-  top: "20px",
-  right: "30px",
-  color: "#fff",
-  border: "none",
-  background: "rgba(255,255,255,0.1)",
-  padding: "10px 20px",
-  borderRadius: "5px",
-  cursor: "pointer",
-};
 
 export default App;
