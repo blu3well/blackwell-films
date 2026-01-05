@@ -13,7 +13,7 @@ const MOVIE_DATA = [
     director: "Victor Gatonye",
     genre: "Romantic Drama, Comedy",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
-    movieFile: "https://player.vimeo.com/video/1145911659",
+    movieFile: "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0&player_id=0&app_id=58479",
     image: "/COTTposter1.jpg",
     landscapeImage: "/COTTP2.jpg",
     isFeatured: true,
