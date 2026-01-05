@@ -23,7 +23,7 @@ html {
   color: var(--text-color);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  scroll-behavior: smooth; /* Enables smooth scrolling for the Info section */
+  scroll-behavior: smooth;
 }
 
 * {
@@ -36,14 +36,14 @@ html {
   min-height: 100vh;
 }
 
-/* --- NAVIGATION (Updated with Glassmorphism) --- */
+/* --- NAVIGATION --- */
 .nav-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 5%;
-  background-color: rgba(26, 24, 22, 0.85); /* Transparent for glass effect */
-  backdrop-filter: blur(12px); /* Frosted glass effect */
+  background-color: rgba(26, 24, 22, 0.85);
+  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
@@ -86,7 +86,7 @@ html {
   text-decoration: none;
   font-size: 14px;
   cursor: pointer;
-  transition: var(--transition-main); /* Added smooth transition */
+  transition: var(--transition-main);
   padding-bottom: 5px;
   border-bottom: 2px solid transparent;
 }
@@ -134,7 +134,7 @@ html {
   font-size: 12px;
 }
 
-/* --- BUTTONS (Updated with Hover Scales) --- */
+/* --- BUTTONS --- */
 .btn {
   padding: 16px;
   border-radius: 8px;
@@ -143,7 +143,7 @@ html {
   width: 100%;
   border: none;
   font-size: 13px;
-  transition: var(--transition-main); /* Smooth transitions */
+  transition: var(--transition-main);
   letter-spacing: 1px;
 }
 
@@ -221,7 +221,7 @@ html {
   background: #422;
 }
 
-/* --- PLAY BUTTON (Updated with Pulse/Glow) --- */
+/* --- PLAY BUTTON --- */
 @keyframes pulse-glow {
   0% {
     box-shadow: 0 0 0 0 rgba(212, 163, 115, 0.5);
@@ -249,14 +249,14 @@ html {
   align-items: center;
   cursor: pointer;
   z-index: 10;
-  animation: pulse-glow 2s infinite; /* Vivid Pulse Effect */
+  animation: pulse-glow 2s infinite;
   transition: var(--transition-main);
 }
 
 .play-overlay-btn:hover {
   background-color: var(--accent-color);
   transform: translate(-50%, -50%) scale(1.15);
-  animation: none; /* Stop pulse on hover for focus */
+  animation: none;
 }
 
 .play-icon {
@@ -287,7 +287,7 @@ html {
 .hero-wrapper {
   width: 100%;
   position: relative;
-  overflow: hidden; /* Contains the image scale effect */
+  overflow: hidden;
 }
 
 .hero-image {
@@ -297,11 +297,11 @@ html {
   object-fit: cover;
   display: block;
   border-radius: 0px;
-  transition: transform 1.2s ease; /* Smooth zoom transition */
+  transition: transform 1.2s ease;
 }
 
 .hero-wrapper:hover .hero-image {
-  transform: scale(1.03); /* Subtle cinematic zoom */
+  transform: scale(1.03);
 }
 
 .hero-content {
@@ -326,7 +326,7 @@ html {
   border-top: 1px solid #222;
 }
 
-/* --- CARDS & GRIDS (Updated with Lift/Shadow) --- */
+/* --- CARDS & GRIDS --- */
 .movie-grid {
   display: flex;
   flex-direction: column;
@@ -338,13 +338,13 @@ html {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border-color);
-  transition: var(--transition-main); /* Smooth lift effect */
+  transition: var(--transition-main);
 }
 
 .movie-card:hover {
-  transform: translateY(-10px); /* Lifts the card */
+  transform: translateY(-10px);
   border-color: var(--accent-color);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); /* Tactile shadow */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
 }
 
 .card-content {
@@ -354,38 +354,73 @@ html {
   align-items: center;
 }
 
-/* --- RESPONSIVENESS (New Media Queries) --- */
+/* --- RESPONSIVENESS (AGGRESSIVE UPDATES) --- */
 @media (max-width: 768px) {
-  .detail-grid {
-    grid-template-columns: 1fr; /* Stacks image and info on mobile */
-    gap: 30px;
-    text-align: center;
-  }
-
-  .detail-title {
-    font-size: 2rem;
-  }
-
-  .hero-image {
-    max-height: 60vh; /* Shorter image on mobile */
-  }
-
+  /* Fix Navigation Crowding */
   .nav-bar {
     padding: 0 15px;
   }
-
   .nav-logo {
-    font-size: 22px;
+    font-size: 20px;
     margin-right: 15px;
   }
+  .nav-links {
+    gap: 12px;
+  }
+  .nav-link {
+    font-size: 11px;
+  }
 
+  /* Fix Auth/Login Cards bleeding off screen */
+  .auth-card {
+    width: 90% !important; /* Force shrinkage on mobile */
+    max-width: 380px;
+    padding: 30px 20px;
+  }
+
+  /* Fix Profile Grid stacking */
+  .profile-grid {
+    grid-template-columns: 1fr; /* Stack sidebar on top of content */
+    gap: 20px;
+  }
+  .profile-container {
+    padding: 40px 15px;
+  }
+
+  /* Hero Adjustments */
+  .hero-content {
+    flex-direction: column; /* Stack Title and Price badge */
+    gap: 10px;
+    text-align: center;
+  }
+  .hero-image {
+    max-height: 50vh;
+  }
+  .hero-actions {
+    margin-top: 20px;
+    padding: 0 10px;
+  }
+
+  /* Detail Page Stacking */
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    text-align: center;
+  }
+  .detail-title {
+    font-size: 2rem;
+  }
+  .meta-label {
+    min-width: 80px;
+  }
+
+  /* Search Bar behavior on small screens */
   .search-input:focus {
-    width: 180px;
+    width: 160px;
   }
 }
 
-/* --- REST OF CSS KEPT AS IS --- */
-
+/* --- COMPONENT STYLES --- */
 .badge {
   padding: 6px 12px;
   border-radius: 4px;
