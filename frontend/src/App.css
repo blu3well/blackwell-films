@@ -38,23 +38,23 @@ html {
   min-height: 100vh;
 }
 
-/* --- HERO SECTION ADJUSTMENTS --- */
+/* --- HERO SECTION (REVERTED & TUNED) --- */
 .hero-wrapper {
   position: relative;
   width: 100%;
-  /* 55vh leaves 45% of the screen for the Title & Buttons below */
-  height: 55vh;
+  /* 70vh is the sweet spot. It feels like a full "hero" image (like before)
+     but leaves the bottom 30% of the screen open for the Title to be seen immediately. */
+  height: 70vh;
   overflow: hidden;
   margin-bottom: 0;
 }
 
-/* object-position: center top 
-   This ensures the TOP of the image (Faces) is always visible.
-   It creates a "poster" effect without cutting heads.
-*/
+/* Standard cover fit. We align to 'top' so faces aren't cut off if the screen is wide. */
 .hero-wrapper .progressive-img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  object-position: center top !important;
+  object-position: top center;
 }
 
 /* --- TYPOGRAPHY CLASSES --- */
@@ -62,7 +62,7 @@ html {
   font-family: "Playfair Display", serif;
   color: var(--accent-color);
   margin: 0;
-  font-size: 3rem;
+  font-size: 3.5rem;
   line-height: 1.1;
   text-align: center;
   letter-spacing: 1px;
@@ -300,13 +300,17 @@ html {
 }
 
 /* --- LAYOUTS --- */
-/* FIX: 20px margin ensures title sits clearly below the image, never on top */
+/* The Reverted & Fixed Layout */
 .centered-container-lg {
   max-width: 1000px;
   margin: 0 auto;
   padding: 0 20px;
   position: relative;
   z-index: 2;
+  /* This is the key fix. 
+     Instead of negative margin (which overlaps), we use 0 or small positive.
+     Combined with the 70vh image height, the title sits just below the image.
+  */
   margin-top: 20px;
 }
 .centered-container {
