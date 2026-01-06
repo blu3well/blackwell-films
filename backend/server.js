@@ -2,7 +2,7 @@ const axios = require("axios");
 const express = require("express");
 const cors = require("cors");
 const pool = require("./db");
-const sgMail = require("@sendgrid/mail"); // Switched from Nodemailer to SendGrid
+const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const app = express();
@@ -11,8 +11,14 @@ const PORT = 5555;
 app.use(cors());
 app.use(express.json());
 
-// --- CONFIGURATION ---
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// --- EMAIL CONFIGURATION ---
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER, // Blackwellfilmsafrica@gmail.com
+    pass: process.env.EMAIL_PASS, // Your 16-character App Password
+  },
+});
 
 // Helper to generate a 6-character code
 const generateCode = () => {
@@ -43,7 +49,7 @@ app.post("/api/purchase-guest", async (req, res) => {
     // B. Generate Ticket
     const code = generateCode();
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 90); // 90 Days Access
+    expiryDate.setDate(expiryDate.getDate() + 90); 
 
     // C. Save to DB
     await pool.query(
@@ -51,47 +57,41 @@ app.post("/api/purchase-guest", async (req, res) => {
       [code, email, movieName, expiryDate]
     );
 
-    // D. Send Email via SendGrid
-    const msg = {
+    // D. Send Email
+    const mailOptions = {
+      from: `"Blackwell Films" <${process.env.EMAIL_USER}>`, // Shows "Blackwell Films" as sender
       to: email,
-      from: "tickets@blackwellfilms.com", // MUST match the Sender you verified in SendGrid
       subject: `Your Ticket for ${movieName}`,
-      text: `Your Access Code is: ${code}`,
       html: `
-        <div style="font-family: Arial, sans-serif; color: #333;">
-          <h2 style="color: #d4a373;">Blackwell Films</h2>
-          <p>Thank you for purchasing access to <strong>${movieName}</strong>.</p>
-          <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
-            <p style="margin: 0; font-size: 14px; color: #555;">YOUR ACCESS CODE:</p>
-            <h1 style="margin: 10px 0; letter-spacing: 5px; color: #000;">${code}</h1>
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px;">
+          <h2 style="color: #d4a373; text-align: center;">BLACKWELL FILMS</h2>
+          <p>Thank you for your purchase! You now have 90 days of access to <strong>${movieName}</strong>.</p>
+          <div style="background: #000; color: #fff; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px; color: #d4a373;">YOUR ACCESS CODE</p>
+            <h1 style="margin: 10px 0; letter-spacing: 8px; font-size: 32px;">${code}</h1>
           </div>
-          <p>You can use this code to watch the movie on up to <strong>3 devices</strong>.</p>
-          <p>Keep this code safe!</p>
-          <hr style="border: 0; border-top: 1px solid #eee;">
-          <p style="font-size: 12px; color: #999;">If you have trouble, reply to this email.</p>
+          <p style="font-size: 13px; color: #666;">This code works on up to <strong>3 devices</strong>. Simply enter it on our website to start watching.</p>
         </div>
       `,
     };
 
-    await sgMail.send(msg);
+    await transporter.sendMail(mailOptions);
 
     res.json({ success: true, code: code, message: "Access Granted!" });
 
   } catch (error) {
-    console.error("Transaction Error:", error);
-    // Even if email fails, we return success so user sees the code on screen immediately
-    res.json({ success: true, code: code, message: "Access Granted (Email might be delayed)" });
+    console.error("Purchase Error:", error);
+    // Even if email fails, we return success so they get the code on the screen
+    res.json({ success: true, code: code, message: "Access Granted (Email failed to send)" });
   }
 });
 
 // 2. VERIFY TICKET & DEVICE LIMIT
 app.post("/api/verify-ticket", async (req, res) => {
   const { code, movieName } = req.body;
-  // Get IP address (handles proxies like Render/Vercel)
   const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   try {
-    // A. Find Ticket
     const ticket = await pool.query(
       "SELECT * FROM tickets WHERE code = $1 AND movie_name = $2",
       [code, movieName]
@@ -103,21 +103,15 @@ app.post("/api/verify-ticket", async (req, res) => {
 
     const data = ticket.rows[0];
 
-    // B. Check Expiry
     if (new Date() > new Date(data.expiry_date)) {
       return res.status(403).json({ valid: false, message: "Ticket Expired" });
     }
 
-    // C. Check Device Limit (Max 3 Unique IPs)
     let currentDevices = data.device_ips || [];
-    
-    // If this IP is not in the list
     if (!currentDevices.includes(userIp)) {
       if (currentDevices.length >= 3) {
-        return res.status(403).json({ valid: false, message: "Device limit reached (Max 3)." });
+        return res.status(403).json({ valid: false, message: "Device limit reached." });
       }
-      
-      // Add new device IP
       await pool.query(
         "UPDATE tickets SET device_ips = array_append(device_ips, $1) WHERE id = $2",
         [userIp, data.id]
@@ -132,4 +126,4 @@ app.post("/api/verify-ticket", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 ACTIVE ON PORT ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 SERVER RUNNING ON ${PORT}`));
