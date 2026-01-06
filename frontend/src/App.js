@@ -150,10 +150,12 @@ function App() {
 
   const processPurchase = async (reference) => {
     setIsProcessing(true);
+    const recipientEmail = email.trim(); // Capturing the email strictly
+
     try {
       // 1. Create Ticket on Server
       const res = await axios.post(`${API_BASE}/purchase-guest`, {
-        email,
+        email: recipientEmail,
         reference,
         movieName: selectedMovie.name,
       });
@@ -162,16 +164,15 @@ function App() {
         saveTicket(selectedMovie.name, res.data.code);
 
         // 2. Send Email from Browser
-        // UPDATED WITH YOUR NEW TEMPLATE ID
         const SERVICE_ID = "service_9qvnylt";
-        const TEMPLATE_ID = "template_f43l5cc"; // <--- UPDATED HERE
+        const TEMPLATE_ID = "template_f43l5cc";
         const PUBLIC_KEY = "RpZwEJtbEPw4skmFZ";
 
         const emailParams = {
           movie_name: selectedMovie.name,
           code: res.data.code,
-          to_email: email,
-          to_name: email,
+          to_email: recipientEmail, // Correct key for EmailJS template
+          to_name: recipientEmail,
           message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwellfilms.onrender.com`,
         };
 
@@ -185,7 +186,7 @@ function App() {
             console.error("Frontend Email Failed", err);
             showFeedback(
               "error",
-              "Email Failed: " + (err.text || "Check Template ID")
+              "Email Failed: " + (err.text || "Check Recipient Address")
             );
           });
 
