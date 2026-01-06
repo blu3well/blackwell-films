@@ -107,13 +107,11 @@ function App() {
     }
   };
 
-  // Navigates to home and scrolls to info
+  // Navigates to dedicated Info Page
   const handleViewInfo = (movie) => {
     setSelectedMovie(movie);
-    setView("home");
-    setTimeout(() => {
-      infoSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    setView("movie-details");
+    window.scrollTo(0, 0);
   };
 
   const handlePaystack = () => {
@@ -135,7 +133,6 @@ function App() {
   const processPurchase = async (reference) => {
     setIsProcessing(true);
     try {
-      // Backend now responds immediately
       const res = await axios.post(`${API_BASE}/purchase-guest`, {
         email,
         reference,
@@ -193,7 +190,6 @@ function App() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // QR Value construction (Safe)
   const qrValue = selectedMovie?.id
     ? `https://blackwellfilms.com/pay?movie=${selectedMovie.id}`
     : "";
@@ -224,7 +220,9 @@ function App() {
               Home
             </span>
             <span
-              className={`nav-link ${view === "movies" ? "active" : ""}`}
+              className={`nav-link ${
+                view === "movies" || view === "movie-details" ? "active" : ""
+              }`}
               onClick={() => setView("movies")}
             >
               Movies
@@ -377,16 +375,22 @@ function App() {
                         </p>
                         <div className="detail-meta">
                           <div className="meta-row">
-                            <span className="meta-label">GENRE:</span>{" "}
-                            {MOVIE_DATA[0].genre}
+                            <span className="meta-label">DIRECTOR:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].director}
+                            </span>
                           </div>
                           <div className="meta-row">
-                            <span className="meta-label">DIRECTOR:</span>{" "}
-                            {MOVIE_DATA[0].director}
+                            <span className="meta-label">GENRE:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].genre}
+                            </span>
                           </div>
                           <div className="meta-row">
-                            <span className="meta-label">CAST:</span>{" "}
-                            {MOVIE_DATA[0].cast.join(", ")}
+                            <span className="meta-label">CAST:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].cast.join(", ")}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -441,6 +445,117 @@ function App() {
               </div>
             )}
 
+            {/* --- NEW DEDICATED MOVIE INFO PAGE --- */}
+            {view === "movie-details" && selectedMovie && (
+              <div
+                className="centered-container-lg"
+                style={{ marginTop: "40px" }}
+              >
+                <button
+                  onClick={() => setView("movies")}
+                  className="btn-ghost"
+                  style={{
+                    width: "auto",
+                    padding: "10px 20px",
+                    marginBottom: "30px",
+                  }}
+                >
+                  ← BACK TO MOVIES
+                </button>
+
+                <div className="detail-grid">
+                  <div className="detail-poster">
+                    <ProgressiveImage src={selectedMovie.image} alt="poster" />
+                  </div>
+                  <div>
+                    <h1
+                      style={{
+                        fontSize: "3rem",
+                        margin: "0 0 10px 0",
+                        color: "var(--accent-color)",
+                      }}
+                    >
+                      {selectedMovie.name}
+                    </h1>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <span
+                        className={`badge ${
+                          hasAccess(selectedMovie.name) ? "badge-owned" : ""
+                        }`}
+                      >
+                        {hasAccess(selectedMovie.name)
+                          ? "ACCESS GRANTED"
+                          : `KES ${selectedMovie.price}`}
+                      </span>
+                      <span className="badge" style={{ background: "#333" }}>
+                        {selectedMovie.genre}
+                      </span>
+                    </div>
+
+                    <p className="detail-desc" style={{ fontSize: "1.1rem" }}>
+                      {selectedMovie.description}
+                    </p>
+
+                    <div className="detail-meta">
+                      <div className="meta-row">
+                        <span className="meta-label">DIRECTOR:</span>
+                        <span className="meta-value">
+                          {selectedMovie.director}
+                        </span>
+                      </div>
+                      <div className="meta-row">
+                        <span className="meta-label">GENRE:</span>
+                        <span className="meta-value">
+                          {selectedMovie.genre}
+                        </span>
+                      </div>
+                      <div className="meta-row">
+                        <span className="meta-label">CAST:</span>
+                        <span className="meta-value">
+                          {selectedMovie.cast.join(", ")}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "30px",
+                        display: "flex",
+                        gap: "15px",
+                      }}
+                    >
+                      <button
+                        onClick={() => handlePlayRequest(selectedMovie)}
+                        className="btn btn-primary"
+                        style={{ maxWidth: "200px" }}
+                      >
+                        {hasAccess(selectedMovie.name)
+                          ? "WATCH NOW"
+                          : "BUY ACCESS"}
+                      </button>
+                      {selectedMovie.trailerLink && (
+                        <button
+                          onClick={() =>
+                            setActiveTrailer(selectedMovie.trailerLink)
+                          }
+                          className="btn btn-secondary"
+                          style={{ maxWidth: "200px" }}
+                        >
+                          TRAILER
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {view === "shows" && (
               <div
                 className="centered-container-lg"
@@ -478,7 +593,7 @@ function App() {
           <div>
             <h5 className="footer-head">Socials</h5>
             <a
-              href="https://tiktok.com"
+              href="https://www.tiktok.com/@blackwellfilms?lang=en"
               target="_blank"
               rel="noreferrer"
               className="footer-link"
@@ -486,7 +601,7 @@ function App() {
               TikTok
             </a>
             <a
-              href="https://instagram.com"
+              href="https://www.instagram.com/blackwell_films/"
               target="_blank"
               rel="noreferrer"
               className="footer-link"
@@ -494,7 +609,7 @@ function App() {
               Instagram
             </a>
             <a
-              href="https://facebook.com"
+              href="https://www.facebook.com/Blackwellfilms"
               target="_blank"
               rel="noreferrer"
               className="footer-link"

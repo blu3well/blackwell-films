@@ -298,7 +298,6 @@ html {
 }
 
 /* --- CARDS --- */
-/* UPDATED GRID SIZE */
 .movie-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -345,15 +344,23 @@ html {
   flex-direction: column;
   gap: 15px;
 }
+
+/* FIXED ALIGNMENT FOR CAST LIST */
 .meta-row {
+  display: flex;
+  align-items: flex-start;
   font-size: 16px;
   line-height: 1.6;
 }
 .meta-label {
   color: var(--accent-color);
   font-weight: bold;
-  display: inline-block;
-  min-width: 90px;
+  min-width: 100px; /* Fixed width prevents spillover */
+  flex-shrink: 0;
+}
+.meta-value {
+  flex: 1; /* Takes remaining width */
+  text-align: left;
 }
 
 /* --- FOOTER --- */
@@ -487,6 +494,13 @@ html {
     gap: 30px;
     text-align: center;
   }
+  .meta-row {
+    justify-content: center;
+  } /* Center text on mobile if desired */
+  .meta-label {
+    min-width: auto;
+    margin-right: 10px;
+  } /* Relax fixed width on mobile */
 }
 
 /* --- PROGRESSIVE IMAGE --- */
