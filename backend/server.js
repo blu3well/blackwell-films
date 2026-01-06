@@ -11,31 +11,31 @@ const PORT = process.env.PORT || 5555;
 app.use(cors());
 app.use(express.json());
 
-// --- EMAIL CONFIGURATION (PORT 587 FIX) ---
+// --- EMAIL CONFIGURATION (STANDARD GMAIL SERVICE) ---
+// We revert to the built-in 'service' preset which handles the handshake automatically.
 let transporter;
 try {
   transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587, // Switched to 587 (Standard Submission Port)
-    secure: false, // Must be false for Port 587
+    service: "gmail", 
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: process.env.EMAIL_USER, 
+      pass: process.env.EMAIL_PASS, 
     },
-    // CRITICAL SETTINGS
-    family: 4, // Force IPv4
-    connectionTimeout: 20000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,
-  });
-
-  transporter.verify((error, success) => {
-    if (error) {
-      console.error("⚠️ Email Server Connection Failed:", error);
-    } else {
-      console.log("✅ Email Server Ready (Port 587)");
+    // Fix for cloud environment timeouts
+    tls: {
+      rejectUnauthorized: false 
     }
   });
+  
+  // Verify connection on startup
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error("⚠️ Email Server Connection Error:", error);
+    } else {
+      console.log("✅ Email Server Ready (Service: Gmail)");
+    }
+  });
+
 } catch (err) {
   console.error("Email Transport Init Failed:", err.message);
 }
@@ -59,19 +59,19 @@ app.post("/api/purchase-guest", async (req, res) => {
   try {
     // A. Verify Payment with Paystack
     try {
-      const paystackUrl = `https://api.paystack.co/transaction/verify/${reference}`;
-      await axios.get(paystackUrl, {
-        headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
-        timeout: 10000,
-      });
+        const paystackUrl = `https://api.paystack.co/transaction/verify/${reference}`;
+        await axios.get(paystackUrl, { 
+            headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+            timeout: 10000 
+        });
     } catch (paystackError) {
-      console.error("Paystack Verification Error:", paystackError.message);
+        console.error("Paystack Verification Error:", paystackError.message);
     }
 
     // B. Generate Ticket
     const code = generateCode();
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 90);
+    expiryDate.setDate(expiryDate.getDate() + 90); 
 
     // C. Save to DB
     await pool.query(
@@ -84,11 +84,11 @@ app.post("/api/purchase-guest", async (req, res) => {
 
     // E. Send Email in Background
     if (transporter && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      const mailOptions = {
-        from: `"Blackwell Films" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: `Your Ticket for ${movieName}`,
-        html: `
+        const mailOptions = {
+            from: `"Blackwell Films" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `Your Ticket for ${movieName}`,
+            html: `
                 <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px;">
                 <h2 style="color: #d4a373; text-align: center;">BLACKWELL FILMS</h2>
                 <p>Thank you for your purchase! You now have 90 days of access to <strong>${movieName}</strong>.</p>
@@ -99,25 +99,20 @@ app.post("/api/purchase-guest", async (req, res) => {
                 <p style="font-size: 13px; color: #666;">This code works on up to <strong>3 devices</strong>. Simply enter it on our website to start watching.</p>
                 </div>
             `,
-      };
-
-      console.log("Attempting to send email...");
-      transporter
-        .sendMail(mailOptions)
-        .then(() => console.log("✅ Email sent successfully"))
-        .catch((err) => console.error("❌ Background Email Failed:", err));
+        };
+        
+        console.log("Attempting to send email...");
+        transporter.sendMail(mailOptions)
+           .then(() => console.log("✅ Email sent successfully"))
+           .catch(err => console.error("❌ Background Email Failed:", err));
     } else {
-      console.log("⚠️ Skipping email: Creds missing or Transporter not ready");
+        console.log("⚠️ Skipping email: Creds missing or Transporter not ready");
     }
+
   } catch (error) {
     console.error("Server Logic Error:", error);
     if (!res.headersSent) {
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Server encountered an error processing ticket.",
-        });
+        res.status(500).json({ success: false, message: "Server encountered an error processing ticket." });
     }
   }
 });
@@ -125,7 +120,7 @@ app.post("/api/purchase-guest", async (req, res) => {
 // 2. VERIFY TICKET & DEVICE LIMIT
 app.post("/api/verify-ticket", async (req, res) => {
   const { code, movieName } = req.body;
-  const userIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+  const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   try {
     const ticket = await pool.query(
@@ -146,9 +141,7 @@ app.post("/api/verify-ticket", async (req, res) => {
     let currentDevices = data.device_ips || [];
     if (!currentDevices.includes(userIp)) {
       if (currentDevices.length >= 3) {
-        return res
-          .status(403)
-          .json({ valid: false, message: "Device limit reached (Max 3)." });
+        return res.status(403).json({ valid: false, message: "Device limit reached (Max 3)." });
       }
       await pool.query(
         "UPDATE tickets SET device_ips = array_append(device_ips, $1) WHERE id = $2",
@@ -157,6 +150,7 @@ app.post("/api/verify-ticket", async (req, res) => {
     }
 
     res.json({ valid: true, message: "Access Granted" });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Verification failed" });
