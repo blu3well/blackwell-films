@@ -25,8 +25,8 @@ const MOVIE_DATA = [
 ];
 
 const LEGAL_TEXT = {
-  terms: `TERMS OF SERVICE\n\n1. ACCEPTANCE OF TERMS\nBy accessing and using the Blackwell Films platform, you agree to be bound by these Terms of Service.\n\n2. DIGITAL CONTENT LICENSE\nWhen you purchase a ticket or access code, Blackwell Films grants you a non-exclusive, non-transferable, limited license to view the specific content for personal, non-commercial use. This license is valid for 90 days from the date of purchase.\n\n3. DEVICE LIMITATIONS\nYour access code is valid for use on up to three (3) unique devices (e.g., one mobile phone, one laptop, one tablet). Sharing your code publicly or attempting to bypass this limit will result in immediate termination of access without refund.\n\n4. REFUND POLICY\nDue to the nature of digital streaming content, all sales are final. Refunds are only issued in the event of a proven technical failure on our end that prevents access to the content for the duration of your license.\n\n5. INTELLECTUAL PROPERTY\nAll content, including films, trailers, images, and logos, are the property of Blackwell Films or its licensors.`,
-  privacy: `PRIVACY POLICY\n\n1. INFORMATION COLLECTION\nWe collect only the information necessary to facilitate your viewing experience. This includes your email address (for ticket delivery) and payment confirmation details. We do not store your full credit card information.\n\n2. HOW WE USE YOUR DATA\nYour email is used solely to send you your access code and receipt. We may occasionally send important updates regarding the platform. We do not sell, rent, or trade your personal information.\n\n3. DEVICE TRACKING\nTo enforce our single-user license, we log the IP address of the devices used to access our content. This data is used strictly for security and license enforcement purposes.\n\n4. CONTACT US\nIf you have questions regarding your data or these policies, please contact us at blackwellfilmsafrica@gmail.com.`,
+  terms: `TERMS OF SERVICE\n\n1. ACCEPTANCE OF TERMS\nBy accessing and using the Blackwell Films platform, you agree to be bound by these Terms of Service.\n\n2. DIGITAL CONTENT LICENSE\nWhen you purchase a ticket or access code, Blackwell Films grants you a non-exclusive, non-transferable, limited license to view the specific content for personal, non-commercial use. This license is valid for 90 days from the date of purchase.\n\n3. DEVICE LIMITATIONS\nYour access code is valid for use on up to three (3) unique devices. Sharing your code publicly will result in termination of access.\n\n4. REFUND POLICY\nAll sales are final once access is granted.\n\n5. INTELLECTUAL PROPERTY\nAll content is property of Blackwell Films.`,
+  privacy: `PRIVACY POLICY\n\n1. INFORMATION COLLECTION\nWe collect your email address for ticket delivery. We do not store credit card information.\n\n2. USE OF DATA\nYour email is used to send your access code. We do not sell your data.\n\n3. DEVICE TRACKING\nWe log IP addresses to enforce the single-user license.\n\n4. CONTACT\nblackwellfilmsafrica@gmail.com`,
 };
 
 function ProgressiveImage({ src, alt, className, style, onClick }) {
@@ -61,15 +61,13 @@ function ProgressiveImage({ src, alt, className, style, onClick }) {
 }
 
 function App() {
-  // State
   const [view, setView] = useState("home");
   const [accessCodes, setAccessCodes] = useState(
     () => JSON.parse(localStorage.getItem("blackwell_tickets")) || {}
   );
   const [showGatekeeper, setShowGatekeeper] = useState(false);
-  const [gatekeeperMode, setGatekeeperMode] = useState("buy"); // 'buy' or 'code'
+  const [gatekeeperMode, setGatekeeperMode] = useState("buy");
 
-  // Forms & UI
   const [email, setEmail] = useState("");
   const [inputCode, setInputCode] = useState("");
   const [status, setStatus] = useState({ type: "", message: "" });
@@ -85,7 +83,6 @@ function App() {
   const infoSectionRef = useRef(null);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
-  // --- HELPERS ---
   const showFeedback = (type, msg) => {
     setStatus({ type, message: msg });
     setTimeout(() => setStatus({ type: "", message: "" }), 5000);
@@ -110,20 +107,19 @@ function App() {
     }
   };
 
-  // --- PAYSTACK LOGIC ---
-  const handlePaystack = () => {
-    if (!email)
-      return showFeedback(
-        "error",
-        "Please enter your email to receive the ticket."
-      );
+  // Navigates to home and scrolls to info
+  const handleViewInfo = (movie) => {
+    setSelectedMovie(movie);
+    setView("home");
+    setTimeout(() => {
+      infoSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
 
-    if (!window.PaystackPop) {
-      return showFeedback(
-        "error",
-        "Payment system loading... please try again."
-      );
-    }
+  const handlePaystack = () => {
+    if (!email) return showFeedback("error", "Please enter your email.");
+    if (!window.PaystackPop)
+      return showFeedback("error", "Payment system loading...");
 
     const handler = window.PaystackPop.setup({
       key: "pk_test_8196b2b3d7ad464e3e647c4d23a1e092a40b8da8",
@@ -138,48 +134,30 @@ function App() {
 
   const processPurchase = async (reference) => {
     setIsProcessing(true);
-    // Safety timeout to ensure it doesn't stay processing forever
-    const timeoutId = setTimeout(() => {
-      if (isProcessing) {
-        setIsProcessing(false);
-        showFeedback(
-          "error",
-          "Verification timed out. Please contact support with Ref: " +
-            reference
-        );
-      }
-    }, 15000);
-
     try {
+      // Backend now responds immediately
       const res = await axios.post(`${API_BASE}/purchase-guest`, {
         email,
         reference,
         movieName: selectedMovie.name,
       });
 
-      clearTimeout(timeoutId);
-
       if (res.data.success) {
         saveTicket(selectedMovie.name, res.data.code);
         setShowGatekeeper(false);
         setIsPlaying(true);
-        showFeedback("success", "Ticket confirmed! Code sent to email.");
+        showFeedback("success", "Access Granted! Code sent to email.");
       } else {
-        showFeedback("error", res.data.message || "Authentication failed.");
+        showFeedback("error", res.data.message || "Failed.");
       }
     } catch (err) {
-      clearTimeout(timeoutId);
       console.error("Purchase Error:", err);
-      showFeedback(
-        "error",
-        err.response?.data?.message || "Connection error. Contact support."
-      );
+      showFeedback("error", "Connection error. Contact support.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // --- CODE VERIFICATION LOGIC ---
   const verifyCode = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -193,7 +171,7 @@ function App() {
         saveTicket(selectedMovie.name, inputCode);
         setShowGatekeeper(false);
         setIsPlaying(true);
-        showFeedback("success", "Code Accepted! Enjoy.");
+        showFeedback("success", "Access Granted!");
       }
     } catch (err) {
       showFeedback("error", err.response?.data?.message || "Invalid Code");
@@ -214,6 +192,11 @@ function App() {
   const filteredResults = movies.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // QR Value construction (Safe)
+  const qrValue = selectedMovie?.id
+    ? `https://blackwellfilms.com/pay?movie=${selectedMovie.id}`
+    : "";
 
   return (
     <div className="app-container">
@@ -276,9 +259,7 @@ function App() {
       <div className="main-content">
         {searchQuery ? (
           <div className="centered-container">
-            <h2 style={{ marginBottom: "30px", fontWeight: "300" }}>
-              RESULTS FOR "{searchQuery.toUpperCase()}"
-            </h2>
+            <h2 style={{ marginBottom: "30px", fontWeight: "300" }}>RESULTS</h2>
             {filteredResults.map((item) => (
               <div
                 key={item.id}
@@ -323,7 +304,6 @@ function App() {
                 <div className="centered-container-lg">
                   <div className="hero-content">
                     <div>
-                      {/* INCREASED FONT SIZE, REMOVED "FEATURED" TEXT */}
                       <h2
                         style={{
                           color: "var(--accent-color)",
@@ -341,7 +321,7 @@ function App() {
                       }`}
                     >
                       {hasAccess(MOVIE_DATA[0].name)
-                        ? "TICKET ACTIVE"
+                        ? "ACCESS GRANTED"
                         : `KES ${MOVIE_DATA[0].price}`}
                     </span>
                   </div>
@@ -365,10 +345,10 @@ function App() {
                     >
                       {hasAccess(MOVIE_DATA[0].name)
                         ? "▶ WATCH NOW"
-                        : "GET TICKET"}
+                        : "BUY ACCESS"}
                     </button>
                     <button onClick={scrollToInfo} className="btn btn-ghost">
-                      INFO
+                      VIEW INFO
                     </button>
                   </div>
 
@@ -381,13 +361,25 @@ function App() {
                         />
                       </div>
                       <div>
-                        <h3 style={{ color: "var(--accent-color)" }}>
+                        <h3
+                          style={{
+                            color: "var(--accent-color)",
+                            fontSize: "2rem",
+                          }}
+                        >
                           SYNOPSIS
                         </h3>
-                        <p className="detail-desc">
+                        <p
+                          className="detail-desc"
+                          style={{ fontSize: "1.1rem" }}
+                        >
                           {MOVIE_DATA[0].description}
                         </p>
                         <div className="detail-meta">
+                          <div className="meta-row">
+                            <span className="meta-label">GENRE:</span>{" "}
+                            {MOVIE_DATA[0].genre}
+                          </div>
                           <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>{" "}
                             {MOVIE_DATA[0].director}
@@ -404,7 +396,6 @@ function App() {
               </div>
             )}
 
-            {/* --- MOVIES PAGE (Restored) --- */}
             {view === "movies" && (
               <div className="centered-container-lg">
                 <h1
@@ -427,12 +418,22 @@ function App() {
                       />
                       <div className="card-content">
                         <h3>{movie.name}</h3>
-                        <button
-                          onClick={() => handlePlayRequest(movie)}
-                          className="btn btn-primary btn-sm"
-                        >
-                          WATCH
-                        </button>
+                        <div style={{ display: "flex", gap: "10px" }}>
+                          <button
+                            onClick={() => handlePlayRequest(movie)}
+                            className="btn btn-primary btn-sm"
+                            style={{ flex: 1 }}
+                          >
+                            WATCH
+                          </button>
+                          <button
+                            onClick={() => handleViewInfo(movie)}
+                            className="btn btn-ghost btn-sm"
+                            style={{ flex: 1 }}
+                          >
+                            VIEW INFO
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -440,7 +441,6 @@ function App() {
               </div>
             )}
 
-            {/* --- SHOWS PAGE (Empty, Coming Soon) --- */}
             {view === "shows" && (
               <div
                 className="centered-container-lg"
@@ -462,7 +462,6 @@ function App() {
         )}
       </div>
 
-      {/* --- FOOTER --- */}
       <footer className="app-footer">
         <div className="footer-grid">
           <div>
@@ -476,7 +475,6 @@ function App() {
               © 2025 Blackwell Films.
             </p>
           </div>
-
           <div>
             <h5 className="footer-head">Socials</h5>
             <a
@@ -504,7 +502,6 @@ function App() {
               Facebook
             </a>
           </div>
-
           <div>
             <h5 className="footer-head">Support</h5>
             <button
@@ -529,7 +526,6 @@ function App() {
         </div>
       </footer>
 
-      {/* --- GATEKEEPER MODAL --- */}
       {showGatekeeper && (
         <div className="modal-overlay">
           <div
@@ -560,7 +556,7 @@ function App() {
                 }`}
                 onClick={() => setGatekeeperMode("buy")}
               >
-                BUY TICKET
+                BUY ACCESS
               </button>
               <button
                 className={`tab-btn ${
@@ -582,7 +578,8 @@ function App() {
               {gatekeeperMode === "buy" && (
                 <div style={{ textAlign: "center" }}>
                   <p style={{ color: "#ccc", marginBottom: "20px" }}>
-                    Get 90 days access on up to 3 devices. <br />
+                    Get 90 days access on up to 3 devices.
+                    <br />
                     We'll email you a unique access code.
                   </p>
                   <input
@@ -633,7 +630,6 @@ function App() {
                 </form>
               )}
 
-              {/* QR CRASH FIX: Safety check for selectedMovie ID to prevent black screen */}
               {gatekeeperMode === "qr" && (
                 <div style={{ textAlign: "center", padding: "20px" }}>
                   <p style={{ color: "#ccc", marginBottom: "20px" }}>
@@ -647,13 +643,10 @@ function App() {
                       borderRadius: "8px",
                     }}
                   >
-                    {selectedMovie && selectedMovie.id ? (
-                      <QRCodeCanvas
-                        value={`https://blackwellfilms.com/pay?movie=${selectedMovie.id}`}
-                        size={150}
-                      />
+                    {qrValue ? (
+                      <QRCodeCanvas value={qrValue} size={150} />
                     ) : (
-                      <p style={{ color: "black" }}>QR Unavailable</p>
+                      <p style={{ color: "#333" }}>Loading QR...</p>
                     )}
                   </div>
                   <p
@@ -672,7 +665,6 @@ function App() {
         </div>
       )}
 
-      {/* --- VIDEO PLAYER --- */}
       {isPlaying && selectedMovie && (
         <div className="theater-overlay">
           <button
