@@ -38,23 +38,33 @@ html {
   min-height: 100vh;
 }
 
-/* --- HERO SECTION (REVERTED & TUNED) --- */
+/* --- HERO SECTION FIXED --- */
 .hero-wrapper {
   position: relative;
   width: 100%;
-  /* 70vh is the sweet spot. It feels like a full "hero" image (like before)
-     but leaves the bottom 30% of the screen open for the Title to be seen immediately. */
-  height: 70vh;
+  /* 50vh = Exactly half the screen height. 
+     This leaves the other half for the Title & Buttons (No Scrolling needed). */
+  height: 50vh;
   overflow: hidden;
   margin-bottom: 0;
+  background-color: #000; /* Ensures any empty space blends in */
+  display: flex;
+  align-items: flex-end; /* Pushes image to the bottom */
+  justify-content: center;
 }
 
-/* Standard cover fit. We align to 'top' so faces aren't cut off if the screen is wide. */
+/* Ensure the container of the image fills the wrapper */
+.hero-image {
+  width: 100%;
+  height: 100%;
+}
+
+/* THE FIX: 'contain' ensures the image is NEVER cut. */
 .hero-wrapper .progressive-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  object-fit: contain !important; /* Shows full image, no cropping */
+  object-position: bottom center !important; /* Aligns image to sit right on top of title */
 }
 
 /* --- TYPOGRAPHY CLASSES --- */
@@ -62,7 +72,7 @@ html {
   font-family: "Playfair Display", serif;
   color: var(--accent-color);
   margin: 0;
-  font-size: 3.5rem;
+  font-size: 3rem;
   line-height: 1.1;
   text-align: center;
   letter-spacing: 1px;
@@ -300,18 +310,13 @@ html {
 }
 
 /* --- LAYOUTS --- */
-/* The Reverted & Fixed Layout */
 .centered-container-lg {
   max-width: 1000px;
   margin: 0 auto;
   padding: 0 20px;
   position: relative;
   z-index: 2;
-  /* This is the key fix. 
-     Instead of negative margin (which overlaps), we use 0 or small positive.
-     Combined with the 70vh image height, the title sits just below the image.
-  */
-  margin-top: 20px;
+  margin-top: 20px; /* Small gap between image and title */
 }
 .centered-container {
   max-width: 1000px;
