@@ -38,33 +38,28 @@ html {
   min-height: 100vh;
 }
 
-/* --- HERO SECTION FIXED --- */
+/* --- HERO SECTION CORRECTED --- */
 .hero-wrapper {
   position: relative;
   width: 100%;
-  /* 50vh = Exactly half the screen height. 
-     This leaves the other half for the Title & Buttons (No Scrolling needed). */
-  height: 50vh;
+  /* Max height limits it so title shows below. */
+  height: 60vh;
   overflow: hidden;
   margin-bottom: 0;
-  background-color: #000; /* Ensures any empty space blends in */
-  display: flex;
-  align-items: flex-end; /* Pushes image to the bottom */
-  justify-content: center;
+  background-color: #000;
+  display: block; /* Removes flex centering behavior */
 }
 
-/* Ensure the container of the image fills the wrapper */
-.hero-image {
-  width: 100%;
-  height: 100%;
-}
-
-/* THE FIX: 'contain' ensures the image is NEVER cut. */
+/* 1. width: 100% -> Touches horizontal ends.
+   2. height: 100% -> Fills the 60vh container.
+   3. object-fit: cover -> No black bars. Fills every pixel.
+   4. object-position: bottom -> If it must crop, it cuts the TOP, saving the bottom (faces).
+*/
 .hero-wrapper .progressive-img {
   width: 100%;
   height: 100%;
-  object-fit: contain !important; /* Shows full image, no cropping */
-  object-position: bottom center !important; /* Aligns image to sit right on top of title */
+  object-fit: cover !important;
+  object-position: center bottom !important;
 }
 
 /* --- TYPOGRAPHY CLASSES --- */
@@ -316,7 +311,7 @@ html {
   padding: 0 20px;
   position: relative;
   z-index: 2;
-  margin-top: 20px; /* Small gap between image and title */
+  margin-top: 15px;
 }
 .centered-container {
   max-width: 1000px;
