@@ -22,27 +22,11 @@ const MOVIE_DATA = [
     isFeatured: true,
     type: "movie",
   },
-  // Add more placeholders for "Shows" page if needed
-  {
-    id: "coming-soon-1",
-    name: "Nairobi Nights",
-    price: 0,
-    description: "Coming Soon",
-    cast: [],
-    director: "TBA",
-    genre: "Drama",
-    trailerLink: "",
-    movieFile: "",
-    image: "https://via.placeholder.com/300x450?text=Coming+Soon",
-    landscapeImage: "",
-    isFeatured: false,
-    type: "show",
-  },
 ];
 
 const LEGAL_TEXT = {
-  terms: `TERMS OF SERVICE\n\n1. ACCEPTANCE OF TERMS\nBy accessing and using the Blackwell Films platform, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.\n\n2. DIGITAL CONTENT LICENSE\nWhen you purchase a ticket or access code, Blackwell Films grants you a non-exclusive, non-transferable, limited license to view the specific content for personal, non-commercial use. This license is valid for 90 days from the date of purchase.\n\n3. DEVICE LIMITATIONS\nYour access code is valid for use on up to three (3) unique devices (e.g., one mobile phone, one laptop, one tablet). Sharing your code publicly or attempting to bypass this limit will result in immediate termination of access without refund.\n\n4. REFUND POLICY\nDue to the nature of digital streaming content, all sales are final. Refunds are only issued in the event of a proven technical failure on our end that prevents access to the content for the duration of your license.\n\n5. INTELLECTUAL PROPERTY\nAll content, including films, trailers, images, and logos, are the property of Blackwell Films or its licensors and are protected by copyright laws. Unauthorized recording, copying, or redistribution is strictly prohibited.`,
-  privacy: `PRIVACY POLICY\n\n1. INFORMATION COLLECTION\nWe collect only the information necessary to facilitate your viewing experience. This includes your email address (for ticket delivery) and payment confirmation details. We do not store your full credit card information; payments are processed securely via Paystack.\n\n2. HOW WE USE YOUR DATA\nYour email is used solely to send you your access code and receipt. We may occasionally send important updates regarding the platform or your specific purchase. We do not sell, rent, or trade your personal information to third parties.\n\n3. DEVICE TRACKING\nTo enforce our single-user license, we log the IP address of the devices used to access our content. This data is used strictly for security and license enforcement purposes.\n\n4. DATA SECURITY\nWe implement industry-standard security measures to protect your data. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.\n\n5. CONTACT US\nIf you have questions regarding your data or these policies, please contact us at blackwellfilmsafrica@gmail.com.`,
+  terms: `TERMS OF SERVICE\n\n1. ACCEPTANCE OF TERMS\nBy accessing and using the Blackwell Films platform, you agree to be bound by these Terms of Service.\n\n2. DIGITAL CONTENT LICENSE\nWhen you purchase a ticket or access code, Blackwell Films grants you a non-exclusive, non-transferable, limited license to view the specific content for personal, non-commercial use. This license is valid for 90 days from the date of purchase.\n\n3. DEVICE LIMITATIONS\nYour access code is valid for use on up to three (3) unique devices (e.g., one mobile phone, one laptop, one tablet). Sharing your code publicly or attempting to bypass this limit will result in immediate termination of access without refund.\n\n4. REFUND POLICY\nDue to the nature of digital streaming content, all sales are final. Refunds are only issued in the event of a proven technical failure on our end that prevents access to the content for the duration of your license.\n\n5. INTELLECTUAL PROPERTY\nAll content, including films, trailers, images, and logos, are the property of Blackwell Films or its licensors.`,
+  privacy: `PRIVACY POLICY\n\n1. INFORMATION COLLECTION\nWe collect only the information necessary to facilitate your viewing experience. This includes your email address (for ticket delivery) and payment confirmation details. We do not store your full credit card information.\n\n2. HOW WE USE YOUR DATA\nYour email is used solely to send you your access code and receipt. We may occasionally send important updates regarding the platform. We do not sell, rent, or trade your personal information.\n\n3. DEVICE TRACKING\nTo enforce our single-user license, we log the IP address of the devices used to access our content. This data is used strictly for security and license enforcement purposes.\n\n4. CONTACT US\nIf you have questions regarding your data or these policies, please contact us at blackwellfilmsafrica@gmail.com.`,
 };
 
 function ProgressiveImage({ src, alt, className, style, onClick }) {
@@ -134,16 +118,15 @@ function App() {
         "Please enter your email to receive the ticket."
       );
 
-    // Check if Paystack script is loaded
     if (!window.PaystackPop) {
       return showFeedback(
         "error",
-        "Payment system loading... please try again in a moment."
+        "Payment system loading... please try again."
       );
     }
 
     const handler = window.PaystackPop.setup({
-      key: "pk_test_8196b2b3d7ad464e3e647c4d23a1e092a40b8da8", // Replace with your Public Key
+      key: "pk_test_8196b2b3d7ad464e3e647c4d23a1e092a40b8da8",
       email: email,
       amount: selectedMovie.price * 100,
       currency: "KES",
@@ -155,6 +138,18 @@ function App() {
 
   const processPurchase = async (reference) => {
     setIsProcessing(true);
+    // Safety timeout to ensure it doesn't stay processing forever
+    const timeoutId = setTimeout(() => {
+      if (isProcessing) {
+        setIsProcessing(false);
+        showFeedback(
+          "error",
+          "Verification timed out. Please contact support with Ref: " +
+            reference
+        );
+      }
+    }, 15000);
+
     try {
       const res = await axios.post(`${API_BASE}/purchase-guest`, {
         email,
@@ -162,24 +157,23 @@ function App() {
         movieName: selectedMovie.name,
       });
 
+      clearTimeout(timeoutId);
+
       if (res.data.success) {
         saveTicket(selectedMovie.name, res.data.code);
         setShowGatekeeper(false);
         setIsPlaying(true);
         showFeedback("success", "Ticket confirmed! Code sent to email.");
       } else {
-        showFeedback(
-          "error",
-          res.data.message || "Authentication failed on the site."
-        );
+        showFeedback("error", res.data.message || "Authentication failed.");
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error("Purchase Error:", err);
-      // More specific error message for user
-      const msg =
-        err.response?.data?.message ||
-        "Connection error. Please contact support.";
-      showFeedback("error", msg);
+      showFeedback(
+        "error",
+        err.response?.data?.message || "Connection error. Contact support."
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -247,6 +241,12 @@ function App() {
               Home
             </span>
             <span
+              className={`nav-link ${view === "movies" ? "active" : ""}`}
+              onClick={() => setView("movies")}
+            >
+              Movies
+            </span>
+            <span
               className={`nav-link ${view === "shows" ? "active" : ""}`}
               onClick={() => setView("shows")}
             >
@@ -269,7 +269,6 @@ function App() {
               </span>
             )}
           </div>
-          {/* REMOVED ENTER CODE BUTTON AS REQUESTED */}
         </div>
       </nav>
 
@@ -324,20 +323,17 @@ function App() {
                 <div className="centered-container-lg">
                   <div className="hero-content">
                     <div>
-                      <h2 style={{ color: "var(--accent-color)", margin: 0 }}>
-                        {MOVIE_DATA[0].name}
-                      </h2>
-                      <p
+                      {/* INCREASED FONT SIZE, REMOVED "FEATURED" TEXT */}
+                      <h2
                         style={{
-                          marginTop: "10px",
-                          fontSize: "14px",
-                          fontWeight: "bold",
-                          color: "#fff",
-                          letterSpacing: "1px",
+                          color: "var(--accent-color)",
+                          margin: 0,
+                          fontSize: "4rem",
+                          lineHeight: "1.1",
                         }}
                       >
-                        FEATURED FILM: CARDS ON THE TABLE
-                      </p>
+                        {MOVIE_DATA[0].name}
+                      </h2>
                     </div>
                     <span
                       className={`badge ${
@@ -408,7 +404,8 @@ function App() {
               </div>
             )}
 
-            {view === "shows" && (
+            {/* --- MOVIES PAGE (Restored) --- */}
+            {view === "movies" && (
               <div className="centered-container-lg">
                 <h1
                   style={{
@@ -418,7 +415,7 @@ function App() {
                     letterSpacing: "2px",
                   }}
                 >
-                  SHOWS (COMING SOON)
+                  MOVIES
                 </h1>
                 <div className="movie-grid">
                   {movies.map((movie) => (
@@ -430,27 +427,42 @@ function App() {
                       />
                       <div className="card-content">
                         <h3>{movie.name}</h3>
-                        {movie.price > 0 ? (
-                          <button
-                            onClick={() => handlePlayRequest(movie)}
-                            className="btn btn-primary btn-sm"
-                          >
-                            WATCH
-                          </button>
-                        ) : (
-                          <span className="badge">COMING SOON</span>
-                        )}
+                        <button
+                          onClick={() => handlePlayRequest(movie)}
+                          className="btn btn-primary btn-sm"
+                        >
+                          WATCH
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* --- SHOWS PAGE (Empty, Coming Soon) --- */}
+            {view === "shows" && (
+              <div
+                className="centered-container-lg"
+                style={{ textAlign: "center", padding: "100px 0" }}
+              >
+                <h1
+                  style={{
+                    color: "var(--text-muted)",
+                    fontSize: "3rem",
+                    fontWeight: "300",
+                    letterSpacing: "5px",
+                  }}
+                >
+                  COMING SOON
+                </h1>
+              </div>
+            )}
           </>
         )}
       </div>
 
-      {/* --- FOOTER (Restored Socials & Layout) --- */}
+      {/* --- FOOTER --- */}
       <footer className="app-footer">
         <div className="footer-grid">
           <div>
@@ -621,7 +633,7 @@ function App() {
                 </form>
               )}
 
-              {/* QR CRASH FIX: Added safety check for selectedMovie and QRCode value */}
+              {/* QR CRASH FIX: Safety check for selectedMovie ID to prevent black screen */}
               {gatekeeperMode === "qr" && (
                 <div style={{ textAlign: "center", padding: "20px" }}>
                   <p style={{ color: "#ccc", marginBottom: "20px" }}>
@@ -635,11 +647,13 @@ function App() {
                       borderRadius: "8px",
                     }}
                   >
-                    {selectedMovie && (
+                    {selectedMovie && selectedMovie.id ? (
                       <QRCodeCanvas
                         value={`https://blackwellfilms.com/pay?movie=${selectedMovie.id}`}
                         size={150}
                       />
+                    ) : (
+                      <p style={{ color: "black" }}>QR Unavailable</p>
                     )}
                   </div>
                   <p
