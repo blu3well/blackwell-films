@@ -11,15 +11,32 @@ const PORT = process.env.PORT || 5555;
 app.use(cors());
 app.use(express.json());
 
-// --- EMAIL CONFIGURATION ---
+// --- EMAIL CONFIGURATION (HARDENED) ---
 let transporter;
 try {
+  // We switched from 'service: gmail' to explicit settings to fix Timeouts
   transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465, // Secure SSL port
+    secure: true, // Use SSL
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    // CRITICAL FIXES FOR TIMEOUTS:
+    family: 4, // Force IPv4 (Fixes Google IPv6 handshake hangs)
+    connectionTimeout: 20000, // Wait up to 20s for connection
+    greetingTimeout: 10000, // Wait up to 10s for greeting
+    socketTimeout: 20000, // Wait up to 20s for data
+  });
+
+  // Verify connection immediately on startup to catch errors early
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error("⚠️ Email Server Connection Failed:", error);
+    } else {
+      console.log("✅ Email Server Ready");
+    }
   });
 } catch (err) {
   console.error("Email Transport Init Failed:", err.message);
@@ -43,18 +60,14 @@ app.post("/api/purchase-guest", async (req, res) => {
 
   try {
     // A. Verify Payment with Paystack
-    // We strictly timeout this request to prevent hanging
     try {
       const paystackUrl = `https://api.paystack.co/transaction/verify/${reference}`;
       await axios.get(paystackUrl, {
         headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
-        timeout: 8000,
+        timeout: 10000,
       });
     } catch (paystackError) {
       console.error("Paystack Verification Error:", paystackError.message);
-      // We CONTINUE even if verification "fails" (e.g. network timeout)
-      // because the user already paid on the frontend.
-      // We log it for manual review later.
     }
 
     // B. Generate Ticket
@@ -68,10 +81,10 @@ app.post("/api/purchase-guest", async (req, res) => {
       [code, email, movieName, expiryDate]
     );
 
-    // D. Respond to Client IMMEDIATELY (Fixes "Stuck on Processing")
+    // D. Respond to Client IMMEDIATELY
     res.json({ success: true, code: code, message: "Access Granted!" });
 
-    // E. Send Email in Background (After response)
+    // E. Send Email in Background
     if (transporter && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       const mailOptions = {
         from: `"Blackwell Films" <${process.env.EMAIL_USER}>`,
@@ -89,14 +102,17 @@ app.post("/api/purchase-guest", async (req, res) => {
                 </div>
             `,
       };
-      // We do not await this, so it runs in background
+
+      console.log("Attempting to send email...");
       transporter
         .sendMail(mailOptions)
-        .catch((err) => console.error("Background Email Failed:", err.message));
+        .then(() => console.log("✅ Email sent successfully"))
+        .catch((err) => console.error("❌ Background Email Failed:", err));
+    } else {
+      console.log("⚠️ Skipping email: Creds missing or Transporter not ready");
     }
   } catch (error) {
     console.error("Server Logic Error:", error);
-    // If it crashed before sending response, send error now
     if (!res.headersSent) {
       res
         .status(500)
