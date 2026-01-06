@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import { QRCodeCanvas } from "qrcode.react";
+import emailjs from "@emailjs/browser"; // NEW: Email Service
 import "./App.css";
 
 // --- DATA ---
@@ -147,9 +148,11 @@ function App() {
     handler.openIframe();
   };
 
+  // --- UPDATED PURCHASE LOGIC WITH FRONTEND EMAIL ---
   const processPurchase = async (reference) => {
     setIsProcessing(true);
     try {
+      // 1. Create Ticket on Server
       const res = await axios.post(`${API_BASE}/purchase-guest`, {
         email,
         reference,
@@ -158,6 +161,27 @@ function App() {
 
       if (res.data.success) {
         saveTicket(selectedMovie.name, res.data.code);
+
+        // 2. Send Email from Browser (Bypasses Google Server Block)
+        const emailParams = {
+          movie_name: selectedMovie.name,
+          code: res.data.code,
+          to_email: email,
+          to_name: email,
+          message: `Your Ticket Code for ${selectedMovie.name} is: ${res.data.code}. Watch at https://blackwellfilms.onrender.com`,
+        };
+
+        // YOUR KEYS
+        emailjs
+          .send(
+            "service_9qvnylt",
+            "template_rnliva5",
+            emailParams,
+            "RpZwEJtbEPw4skmFZ"
+          )
+          .then(() => console.log("Email Sent via Frontend"))
+          .catch((err) => console.error("Frontend Email Failed", err));
+
         setShowGatekeeper(false);
         setIsPlaying(true);
         showFeedback("success", "Access Granted! Code sent to email.");
@@ -921,7 +945,6 @@ function App() {
               position: "relative",
             }}
           >
-            {/* FIXED: Added 'allow="autoplay; encrypted-media"' */}
             <iframe
               src={`${activeTrailer}?autoplay=1`}
               style={{
@@ -934,7 +957,7 @@ function App() {
                 border: "none",
               }}
               allowFullScreen
-              allow="autoplay; encrypted-media"
+              allow="autoplay; fullscreen; picture-in-picture"
               title="Trailer"
             ></iframe>
           </div>

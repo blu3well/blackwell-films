@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@sendgrid/mail": "^8.1.6",
     "nodemailer": "^7.0.12",
     "qrcode.react": "^4.2.0"
