@@ -10,7 +10,6 @@
   --error-color: #e74c3c;
   --border-color: #2b2824;
   --nav-height: 80px;
-  /* Premium Transition Speed */
   --transition-main: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -62,7 +61,7 @@ html {
 .nav-logo {
   color: var(--logo-color);
   margin: 0;
-  font-size: 24px; /* Slightly smaller for mobile safe */
+  font-size: 24px;
   letter-spacing: 2px;
   cursor: pointer;
   margin-right: 30px;
@@ -94,9 +93,6 @@ html {
 .nav-link:hover,
 .nav-link.active {
   color: var(--accent-color);
-}
-
-.nav-link.active {
   border-bottom: 2px solid var(--accent-color);
 }
 
@@ -153,10 +149,6 @@ html {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
 .btn-sm {
   width: auto;
   padding: 8px 16px;
@@ -166,10 +158,6 @@ html {
 .btn-primary {
   background-color: var(--accent-color);
   color: var(--text-dark);
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
 }
 
 .btn-secondary {
@@ -215,9 +203,15 @@ html {
 
 /* --- PLAY BUTTON --- */
 @keyframes pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(212, 163, 115, 0.5); }
-  70% { box-shadow: 0 0 0 20px rgba(212, 163, 115, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(212, 163, 115, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 163, 115, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(212, 163, 115, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 163, 115, 0);
+  }
 }
 
 .play-overlay-btn {
@@ -282,7 +276,6 @@ html {
   max-height: 85vh;
   object-fit: cover;
   display: block;
-  border-radius: 0px;
   transition: transform 1.2s ease;
 }
 
@@ -293,7 +286,7 @@ html {
 .hero-content {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start; /* Better alignment with new text */
+  align-items: flex-start;
   margin-top: 40px;
   margin-bottom: 20px;
 }
@@ -336,14 +329,10 @@ html {
   border-bottom: 2px solid var(--accent-color);
 }
 
-.tab-btn:hover {
-  color: white;
-}
-
 /* --- CARDS & GRIDS --- */
 .movie-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 30px;
 }
 
@@ -353,6 +342,8 @@ html {
   overflow: hidden;
   border: 1px solid var(--border-color);
   transition: var(--transition-main);
+  display: flex;
+  flex-direction: column;
 }
 
 .movie-card:hover {
@@ -364,13 +355,12 @@ html {
 .card-content {
   padding: 20px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 10px;
 }
 
-/* --- RESPONSIVENESS (AGGRESSIVE UPDATES) --- */
+/* --- RESPONSIVENESS --- */
 @media (max-width: 768px) {
-  /* Fix Navigation Crowding */
   .nav-bar {
     padding: 0 15px;
   }
@@ -385,25 +375,14 @@ html {
     font-size: 11px;
   }
 
-  /* Fix Auth/Login Cards bleeding off screen */
   .auth-card {
-    width: 90% !important; 
+    width: 90% !important;
     max-width: 380px;
     padding: 30px 20px;
   }
 
-  /* Fix Profile Grid stacking */
-  .profile-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  .profile-container {
-    padding: 40px 15px;
-  }
-
-  /* Hero Adjustments */
   .hero-content {
-    flex-direction: column; 
+    flex-direction: column;
     gap: 10px;
     text-align: center;
     align-items: center;
@@ -411,27 +390,11 @@ html {
   .hero-image {
     max-height: 50vh;
   }
-  .hero-actions {
-    margin-top: 20px;
-    padding: 0 10px;
-  }
 
-  /* Detail Page Stacking */
   .detail-grid {
     grid-template-columns: 1fr;
     gap: 30px;
     text-align: center;
-  }
-  .detail-title {
-    font-size: 2rem;
-  }
-  .meta-label {
-    min-width: 80px;
-  }
-
-  /* Search Bar behavior on small screens */
-  .search-input:focus {
-    width: 140px;
   }
 }
 
@@ -444,24 +407,8 @@ html {
   background-color: #333;
   color: white;
 }
-
 .badge-owned {
   background-color: var(--success-color);
-}
-
-.badge-full-access {
-  font-size: 10px;
-  color: var(--success-color);
-  font-weight: bold;
-  border: 1px solid var(--success-color);
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.detail-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 60px 5%;
 }
 
 .detail-grid {
@@ -473,11 +420,6 @@ html {
 .detail-poster {
   border-radius: 12px;
   overflow: hidden;
-}
-
-.detail-title {
-  font-size: 3rem;
-  margin: 0 0 10px 0;
 }
 
 .detail-desc {
@@ -500,7 +442,6 @@ html {
 .meta-label {
   color: var(--accent-color);
   font-weight: bold;
-  letter-spacing: normal !important;
   display: inline-block;
   min-width: 90px;
 }
@@ -536,13 +477,6 @@ html {
   gap: 30px;
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.footer-brand {
-  color: var(--logo-color);
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  font-weight: bold;
 }
 
 .footer-head {
@@ -639,11 +573,21 @@ html {
 }
 
 @keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
