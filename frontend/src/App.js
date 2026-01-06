@@ -11,7 +11,6 @@ const MOVIE_DATA = [
     price: 250,
     description:
       "An ex-couple team up to rob the gate collections at a Christmas event in 1992 Nairobi, but their layers of unresolved issues land them in police custody.",
-    // Cast link data updated
     cast: [
       {
         name: "Nyakundi Isaboke",
@@ -27,7 +26,6 @@ const MOVIE_DATA = [
         link: "https://www.facebook.com/SirRunyu/?locale=de_DE",
       },
     ],
-    // Director link data updated
     director: {
       name: "Victor Gatonye",
       link: "https://www.linkedin.com/in/victor-gatonye-14a7433a/?originalSubdomain=ke",
@@ -37,8 +35,8 @@ const MOVIE_DATA = [
     movieFile:
       "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
     image: "/COTTposter1.jpg",
-    landscapeImage: "/beth&jackso.jpg", // Updated Image
-    imdbLink: "https://www.imdb.com/title/tt38939205/", // Added IMDb Link
+    landscapeImage: "/beth&jackso.jpg",
+    imdbLink: "https://www.imdb.com/title/tt38939205/",
     isFeatured: true,
     type: "movie",
   },
@@ -321,7 +319,6 @@ function App() {
                 <div className="centered-container-lg">
                   <div className="hero-content">
                     <div>
-                      {/* Font changed to Playfair, size reduced, centered in CSS */}
                       <h2 className="hero-title">{MOVIE_DATA[0].name}</h2>
                     </div>
                     <span
@@ -924,6 +921,7 @@ function App() {
               position: "relative",
             }}
           >
+            {/* FIXED: Added 'allow="autoplay; encrypted-media"' */}
             <iframe
               src={`${activeTrailer}?autoplay=1`}
               style={{
@@ -936,6 +934,7 @@ function App() {
                 border: "none",
               }}
               allowFullScreen
+              allow="autoplay; encrypted-media"
               title="Trailer"
             ></iframe>
           </div>

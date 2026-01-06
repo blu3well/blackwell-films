@@ -11,31 +11,29 @@ const PORT = process.env.PORT || 5555;
 app.use(cors());
 app.use(express.json());
 
-// --- EMAIL CONFIGURATION (HARDENED) ---
+// --- EMAIL CONFIGURATION (PORT 587 FIX) ---
 let transporter;
 try {
-  // We switched from 'service: gmail' to explicit settings to fix Timeouts
   transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465, // Secure SSL port
-    secure: true, // Use SSL
+    port: 587, // Switched to 587 (Standard Submission Port)
+    secure: false, // Must be false for Port 587
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    // CRITICAL FIXES FOR TIMEOUTS:
-    family: 4, // Force IPv4 (Fixes Google IPv6 handshake hangs)
-    connectionTimeout: 20000, // Wait up to 20s for connection
-    greetingTimeout: 10000, // Wait up to 10s for greeting
-    socketTimeout: 20000, // Wait up to 20s for data
+    // CRITICAL SETTINGS
+    family: 4, // Force IPv4
+    connectionTimeout: 20000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
   });
 
-  // Verify connection immediately on startup to catch errors early
   transporter.verify((error, success) => {
     if (error) {
       console.error("⚠️ Email Server Connection Failed:", error);
     } else {
-      console.log("✅ Email Server Ready");
+      console.log("✅ Email Server Ready (Port 587)");
     }
   });
 } catch (err) {
