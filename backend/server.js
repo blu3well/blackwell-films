@@ -49,7 +49,7 @@ app.post("/api/purchase-guest", async (req, res) => {
       [code, email, movieName, expiryDate]
     );
 
-    // D. Respond to Client IMMEDIATELY (Frontend will handle email)
+    // D. Respond to Client
     res.json({ success: true, code: code, message: "Access Granted!" });
   } catch (error) {
     console.error("Server Logic Error:", error);
@@ -105,9 +105,13 @@ app.post("/api/verify-ticket", async (req, res) => {
   }
 });
 
-// 3. RATE MOVIE
+// 3. RATE MOVIE (NEW)
 app.post("/api/rate-movie", async (req, res) => {
   const { movieName, rating, comment } = req.body;
+
+  // NOTE: Ensure you have created the 'movie_ratings' table in your DB
+  // CREATE TABLE movie_ratings (id SERIAL PRIMARY KEY, movie_name VARCHAR(255), rating VARCHAR(10), comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+
   try {
     await pool.query(
       "INSERT INTO movie_ratings (movie_name, rating, comment) VALUES ($1, $2, $3)",

@@ -32,9 +32,9 @@ const MOVIE_DATA = [
       link: "https://www.linkedin.com/in/victor-gatonye-14a7433a/?originalSubdomain=ke",
     },
     genre: "Romantic Drama, Comedy",
-    runtime: "80 mins",
-    rating: "PG",
-    year: "2025",
+    runtime: "80 mins", // NEW
+    rating: "PG", // NEW
+    year: "2025", // NEW
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
     movieFile:
       "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
@@ -100,8 +100,8 @@ function App() {
   const [showContact, setShowContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Rating State
-  const [userRating, setUserRating] = useState(null); // 'up' or 'down'
+  // RATING STATE
+  const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState("");
 
   const movies = useMemo(() => MOVIE_DATA, []);
@@ -178,7 +178,7 @@ function App() {
           code: res.data.code,
           to_email: recipientEmail,
           to_name: recipientEmail,
-          message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwell-films.vercel.app/`,
+          message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwell-films.onrender.com`,
         };
 
         emailjs
@@ -230,10 +230,10 @@ function App() {
     }
   };
 
+  // SUBMIT RATING FUNCTION
   const submitRating = async () => {
     if (!userRating)
       return showFeedback("error", "Please select thumbs up or down.");
-
     setIsProcessing(true);
     try {
       await axios.post(`${API_BASE}/rate-movie`, {
@@ -359,6 +359,7 @@ function App() {
           <>
             {view === "home" && (
               <div>
+                {/* HERO SECTION MODIFIED FOR NO SCROLL */}
                 <div className="hero-wrapper">
                   <div
                     className="play-overlay-btn"
@@ -378,16 +379,44 @@ function App() {
                     <div>
                       <h2 className="hero-title">{MOVIE_DATA[0].name}</h2>
                     </div>
-                    <span
-                      className={`badge ${
-                        hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
-                      }`}
-                      style={{ marginTop: "15px" }}
+                    {/* Badge and Metadata in Hero */}
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                     >
-                      {hasAccess(MOVIE_DATA[0].name)
-                        ? "ACCESS GRANTED"
-                        : `KES ${MOVIE_DATA[0].price}`}
-                    </span>
+                      <span
+                        className={`badge ${
+                          hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
+                        }`}
+                      >
+                        {hasAccess(MOVIE_DATA[0].name)
+                          ? "ACCESS GRANTED"
+                          : `KES ${MOVIE_DATA[0].price}`}
+                      </span>
+                      <span
+                        className="badge"
+                        style={{ borderColor: "#555", color: "#888" }}
+                      >
+                        {MOVIE_DATA[0].runtime}
+                      </span>
+                      <span
+                        className="badge"
+                        style={{ borderColor: "#555", color: "#888" }}
+                      >
+                        {MOVIE_DATA[0].rating}
+                      </span>
+                      <span
+                        className="badge"
+                        style={{ borderColor: "#555", color: "#888" }}
+                      >
+                        {MOVIE_DATA[0].year}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="hero-actions">
@@ -461,24 +490,6 @@ function App() {
                           {MOVIE_DATA[0].description}
                         </p>
                         <div className="detail-meta">
-                          <div className="meta-row">
-                            <span className="meta-label">RUNTIME:</span>
-                            <span className="meta-value">
-                              {MOVIE_DATA[0].runtime}
-                            </span>
-                          </div>
-                          <div className="meta-row">
-                            <span className="meta-label">RATING:</span>
-                            <span className="meta-value">
-                              {MOVIE_DATA[0].rating}
-                            </span>
-                          </div>
-                          <div className="meta-row">
-                            <span className="meta-label">YEAR:</span>
-                            <span className="meta-value">
-                              {MOVIE_DATA[0].year}
-                            </span>
-                          </div>
                           <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>
                             <span className="meta-value">
@@ -687,7 +698,7 @@ function App() {
                       </div>
                     </div>
 
-                    {/* RATINGS SECTION */}
+                    {/* RATINGS UI */}
                     <div
                       className="rating-section"
                       style={{
