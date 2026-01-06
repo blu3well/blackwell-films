@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import { QRCodeCanvas } from "qrcode.react";
-import emailjs from "@emailjs/browser"; // NEW: Email Service
+import emailjs from "@emailjs/browser"; // MUST BE INSTALLED
 import "./App.css";
 
 // --- DATA ---
@@ -104,12 +104,19 @@ function App() {
 
   const showFeedback = (type, msg) => {
     setStatus({ type, message: msg });
-    setTimeout(() => setStatus({ type: "", message: "" }), 5000);
+    // Increased timeout so you can read the error if it happens
+    setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
 
   useEffect(() => {
     const tickets = JSON.parse(localStorage.getItem("blackwell_tickets")) || {};
     setAccessCodes(tickets);
+    // Initialize EmailJS globally
+    try {
+      emailjs.init("RpZwEJtbEPw4skmFZ");
+    } catch (e) {
+      console.error("EmailJS Init Error", e);
+    }
   }, []);
 
   const hasAccess = (movieName) => {
@@ -148,7 +155,6 @@ function App() {
     handler.openIframe();
   };
 
-  // --- UPDATED PURCHASE LOGIC WITH FRONTEND EMAIL ---
   const processPurchase = async (reference) => {
     setIsProcessing(true);
     try {
@@ -168,23 +174,30 @@ function App() {
           code: res.data.code,
           to_email: email,
           to_name: email,
-          message: `Your Ticket Code for ${selectedMovie.name} is: ${res.data.code}. Watch at https://blackwellfilms.onrender.com`,
+          reply_to: "blackwellfilmsafrica@gmail.com",
+          // We put the code in the 'message' field which standard templates always have
+          message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwellfilms.onrender.com`,
         };
 
-        // YOUR KEYS
+        // Send and Catch Errors Visibly
         emailjs
-          .send(
-            "service_9qvnylt",
-            "template_rnliva5",
-            emailParams,
-            "RpZwEJtbEPw4skmFZ"
-          )
-          .then(() => console.log("Email Sent via Frontend"))
-          .catch((err) => console.error("Frontend Email Failed", err));
+          .send("service_9qvnylt", "template_rnliva5", emailParams)
+          .then(() => {
+            console.log("Email Sent via Frontend");
+            showFeedback("success", "Access Granted! Code sent to email.");
+          })
+          .catch((err) => {
+            console.error("Frontend Email Failed", err);
+            // THIS IS THE CRITICAL CHANGE: Show the error to the user
+            showFeedback(
+              "error",
+              "Access Granted, but Email Failed: " +
+                (err.text || "Unknown Error")
+            );
+          });
 
         setShowGatekeeper(false);
         setIsPlaying(true);
-        showFeedback("success", "Access Granted! Code sent to email.");
       } else {
         showFeedback("error", res.data.message || "Failed.");
       }
