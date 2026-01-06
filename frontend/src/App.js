@@ -32,9 +32,9 @@ const MOVIE_DATA = [
       link: "https://www.linkedin.com/in/victor-gatonye-14a7433a/?originalSubdomain=ke",
     },
     genre: "Romantic Drama, Comedy",
-    runtime: "80 mins", // NEW
-    rating: "PG", // NEW
-    year: "2025", // NEW
+    runtime: "80 mins",
+    rating: "PG",
+    year: "2025",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
     movieFile:
       "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
@@ -100,7 +100,6 @@ function App() {
   const [showContact, setShowContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // RATING STATE
   const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState("");
 
@@ -230,7 +229,6 @@ function App() {
     }
   };
 
-  // SUBMIT RATING FUNCTION
   const submitRating = async () => {
     if (!userRating)
       return showFeedback("error", "Please select thumbs up or down.");
@@ -359,7 +357,6 @@ function App() {
           <>
             {view === "home" && (
               <div>
-                {/* HERO SECTION MODIFIED FOR NO SCROLL */}
                 <div className="hero-wrapper">
                   <div
                     className="play-overlay-btn"
@@ -367,6 +364,7 @@ function App() {
                   >
                     <span className="play-icon">▶</span>
                   </div>
+                  {/* STYLE FIX APPLIED HERE VIA CSS */}
                   <ProgressiveImage
                     src={MOVIE_DATA[0].landscapeImage}
                     alt={MOVIE_DATA[0].name}
@@ -379,7 +377,7 @@ function App() {
                     <div>
                       <h2 className="hero-title">{MOVIE_DATA[0].name}</h2>
                     </div>
-                    {/* Badge and Metadata in Hero */}
+                    {/* Badge and Metadata */}
                     <div
                       style={{
                         marginTop: "10px",
@@ -698,7 +696,7 @@ function App() {
                       </div>
                     </div>
 
-                    {/* RATINGS UI */}
+                    {/* RATINGS SECTION */}
                     <div
                       className="rating-section"
                       style={{

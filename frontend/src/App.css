@@ -22,7 +22,7 @@ html {
   margin: 0 !important;
   padding: 0 !important;
   background-color: var(--bg-color) !important;
-  font-family: "Montserrat", sans-serif; /* Changed default font */
+  font-family: "Montserrat", sans-serif;
   color: var(--text-color);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -39,23 +39,27 @@ html {
 }
 
 /* --- HERO SECTION ADJUSTMENTS --- */
-/* Reduced height to ensure title and buttons fit below image without scrolling */
 .hero-wrapper {
   position: relative;
   width: 100%;
-  height: 55vh;
+  height: 65vh; /* Increased to use the empty space */
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 0;
+}
+
+/* Ensure image cuts the top, not the bottom */
+.hero-wrapper .progressive-img {
+  object-position: center bottom !important;
 }
 
 /* --- TYPOGRAPHY CLASSES --- */
 .hero-title {
-  font-family: "Playfair Display", serif; /* Inviting/Appealing Font */
+  font-family: "Playfair Display", serif;
   color: var(--accent-color);
   margin: 0;
-  font-size: 3.5rem; /* Slightly smaller than 4rem */
+  font-size: 3rem; /* Optimal size */
   line-height: 1.1;
-  text-align: center; /* Centered */
+  text-align: center;
   letter-spacing: 1px;
 }
 
@@ -205,7 +209,7 @@ html {
   background-color: #f5c518;
   color: #000;
   font-weight: 800;
-} /* IMDB Style */
+}
 
 /* --- RATING BUTTONS --- */
 .rating-btn {
@@ -291,14 +295,14 @@ html {
 }
 
 /* --- LAYOUTS --- */
-/* Removed negative margin to prevent overlap */
+/* FIX: Removed negative margin. Added positive margin to push title BELOW image */
 .centered-container-lg {
   max-width: 1000px;
   margin: 0 auto;
   padding: 0 20px;
   position: relative;
   z-index: 2;
-  margin-top: 0;
+  margin-top: 15px;
 }
 .centered-container {
   max-width: 1000px;
