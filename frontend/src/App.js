@@ -32,6 +32,9 @@ const MOVIE_DATA = [
       link: "https://www.linkedin.com/in/victor-gatonye-14a7433a/?originalSubdomain=ke",
     },
     genre: "Romantic Drama, Comedy",
+    runtime: "80 mins",
+    rating: "PG",
+    year: "2025",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
     movieFile:
       "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
@@ -97,6 +100,10 @@ function App() {
   const [showContact, setShowContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Rating State
+  const [userRating, setUserRating] = useState(null); // 'up' or 'down'
+  const [userComment, setUserComment] = useState("");
+
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
   const infoSectionRef = useRef(null);
@@ -150,10 +157,9 @@ function App() {
 
   const processPurchase = async (reference) => {
     setIsProcessing(true);
-    const recipientEmail = email.trim(); // Capturing the email strictly
+    const recipientEmail = email.trim();
 
     try {
-      // 1. Create Ticket on Server
       const res = await axios.post(`${API_BASE}/purchase-guest`, {
         email: recipientEmail,
         reference,
@@ -163,7 +169,6 @@ function App() {
       if (res.data.success) {
         saveTicket(selectedMovie.name, res.data.code);
 
-        // 2. Send Email from Browser
         const SERVICE_ID = "service_9qvnylt";
         const TEMPLATE_ID = "template_f43l5cc";
         const PUBLIC_KEY = "RpZwEJtbEPw4skmFZ";
@@ -171,9 +176,9 @@ function App() {
         const emailParams = {
           movie_name: selectedMovie.name,
           code: res.data.code,
-          to_email: recipientEmail, // Correct key for EmailJS template
+          to_email: recipientEmail,
           to_name: recipientEmail,
-          message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwellfilms.onrender.com`,
+          message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwell-films.vercel.app/`,
         };
 
         emailjs
@@ -220,6 +225,27 @@ function App() {
       }
     } catch (err) {
       showFeedback("error", err.response?.data?.message || "Invalid Code");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const submitRating = async () => {
+    if (!userRating)
+      return showFeedback("error", "Please select thumbs up or down.");
+
+    setIsProcessing(true);
+    try {
+      await axios.post(`${API_BASE}/rate-movie`, {
+        movieName: selectedMovie.name,
+        rating: userRating,
+        comment: userComment,
+      });
+      showFeedback("success", "Thanks for your feedback!");
+      setUserRating(null);
+      setUserComment("");
+    } catch (err) {
+      showFeedback("error", "Could not save rating.");
     } finally {
       setIsProcessing(false);
     }
@@ -436,6 +462,24 @@ function App() {
                         </p>
                         <div className="detail-meta">
                           <div className="meta-row">
+                            <span className="meta-label">RUNTIME:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].runtime}
+                            </span>
+                          </div>
+                          <div className="meta-row">
+                            <span className="meta-label">RATING:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].rating}
+                            </span>
+                          </div>
+                          <div className="meta-row">
+                            <span className="meta-label">YEAR:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].year}
+                            </span>
+                          </div>
+                          <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>
                             <span className="meta-value">
                               <a
@@ -582,6 +626,9 @@ function App() {
                       <span className="badge" style={{ background: "#333" }}>
                         {selectedMovie.genre}
                       </span>
+                      <span className="badge" style={{ background: "#333" }}>
+                        {selectedMovie.rating}
+                      </span>
                     </div>
 
                     <p className="detail-desc" style={{ fontSize: "1.1rem" }}>
@@ -589,6 +636,16 @@ function App() {
                     </p>
 
                     <div className="detail-meta">
+                      <div className="meta-row">
+                        <span className="meta-label">RUNTIME:</span>
+                        <span className="meta-value">
+                          {selectedMovie.runtime}
+                        </span>
+                      </div>
+                      <div className="meta-row">
+                        <span className="meta-label">YEAR:</span>
+                        <span className="meta-value">{selectedMovie.year}</span>
+                      </div>
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
                         <span className="meta-value">
@@ -628,6 +685,63 @@ function App() {
                           ))}
                         </span>
                       </div>
+                    </div>
+
+                    {/* RATINGS SECTION */}
+                    <div
+                      className="rating-section"
+                      style={{
+                        marginTop: "30px",
+                        padding: "20px",
+                        background: "rgba(255,255,255,0.05)",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <h4
+                        style={{ marginTop: 0, color: "var(--accent-color)" }}
+                      >
+                        RATE THIS MOVIE
+                      </h4>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "15px",
+                          marginBottom: "15px",
+                        }}
+                      >
+                        <button
+                          onClick={() => setUserRating("up")}
+                          className={`rating-btn ${
+                            userRating === "up" ? "active" : ""
+                          }`}
+                        >
+                          👍
+                        </button>
+                        <button
+                          onClick={() => setUserRating("down")}
+                          className={`rating-btn ${
+                            userRating === "down" ? "active" : ""
+                          }`}
+                        >
+                          👎
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Leave a short comment..."
+                        className="auth-input"
+                        value={userComment}
+                        onChange={(e) => setUserComment(e.target.value)}
+                        style={{ width: "100%", marginBottom: "10px" }}
+                      />
+                      <button
+                        onClick={submitRating}
+                        disabled={isProcessing}
+                        className="btn btn-primary btn-sm"
+                        style={{ width: "auto" }}
+                      >
+                        SUBMIT RATING
+                      </button>
                     </div>
 
                     <div

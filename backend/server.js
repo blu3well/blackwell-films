@@ -105,4 +105,19 @@ app.post("/api/verify-ticket", async (req, res) => {
   }
 });
 
+// 3. RATE MOVIE
+app.post("/api/rate-movie", async (req, res) => {
+  const { movieName, rating, comment } = req.body;
+  try {
+    await pool.query(
+      "INSERT INTO movie_ratings (movie_name, rating, comment) VALUES ($1, $2, $3)",
+      [movieName, rating, comment]
+    );
+    res.json({ success: true, message: "Rating saved!" });
+  } catch (error) {
+    console.error("Rating Error:", error);
+    res.status(500).json({ success: false, message: "Failed to save rating." });
+  }
+});
+
 app.listen(PORT, () => console.log(`🚀 SERVER RUNNING ON ${PORT}`));
