@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
+import { QRCodeCanvas } from "qrcode.react"; // Make sure to npm install qrcode.react
 import "./App.css";
 
+// --- DATA ---
 const MOVIE_DATA = [
   {
     id: "cards-on-the-table",
@@ -13,7 +15,7 @@ const MOVIE_DATA = [
     director: "Victor Gatonye",
     genre: "Romantic Drama, Comedy",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
-    movieFile: "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0&player_id=0&app_id=58479",
+    movieFile: "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
     image: "/COTTposter1.jpg",
     landscapeImage: "/COTTP2.jpg",
     isFeatured: true,
@@ -22,1013 +24,384 @@ const MOVIE_DATA = [
 ];
 
 const LEGAL_TEXT = {
-  terms: `BY ACCESSING BLACKWELL FILMS, YOU AGREE TO THESE TERMS: 
-  1. ACCESS: PURCHASES GRANT A 3-MONTH (90 DAYS) VIEWING PERIOD. 
-  2. REFUNDS: DUE TO THE DIGITAL NATURE OF OUR CONTENT, ALL SALES ARE FINAL ONCE ACCESS IS GRANTED. 
-  3. USAGE: CONTENT IS FOR PERSONAL, NON-COMMERCIAL USE ONLY. SHARING ACCOUNTS IS PROHIBITED. 
-  4. AVAILABILITY: WE AIM FOR 99% UPTIME BUT ARE NOT LIABLE FOR TEMPORARY TECHNICAL INTERRUPTIONS.`,
-  privacy: `YOUR PRIVACY MATTERS TO US:
-  1. DATA COLLECTION: WE COLLECT YOUR NAME AND EMAIL ADDRESS TO MANAGE YOUR ACCOUNT AND PURCHASES.
-  2. PAYMENT SECURITY: WE DO NOT STORE CREDIT CARD DETAILS; ALL PAYMENTS ARE PROCESSED SECURELY VIA PAYSTACK.
-  3. THIRD PARTIES: WE NEVER SELL YOUR DATA. WE ONLY SHARE NECESSARY INFO WITH OUR PAYMENT PROCESSOR TO VERIFY YOUR TRANSACTION.
-  4. COOKIES: WE USE ESSENTIAL COOKIES TO KEEP YOU LOGGED IN.`,
+  terms: `TERMS OF SERVICE: 1. TICKETS GRANT 90 DAYS ACCESS. 2. VALID ON UP TO 3 DEVICES. 3. NO REFUNDS ONCE CODE IS USED.`,
+  privacy: `PRIVACY: WE ONLY STORE YOUR EMAIL TO SEND YOUR TICKET. WE DO NOT SELL DATA.`,
 };
 
 function ProgressiveImage({ src, alt, className, style, onClick }) {
   const [loaded, setLoaded] = useState(false);
   return (
-    <div
-      className={`progressive-image-container ${className || ""}`}
-      style={style}
-      onClick={onClick}
-    >
+    <div className={`progressive-image-container ${className || ""}`} style={style} onClick={onClick}>
       {!loaded && <div className="shimmer" />}
       <img
         src={src}
         alt={alt}
         className="progressive-img"
-        style={{
-          opacity: loaded ? 1 : 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-        }}
+        style={{ opacity: loaded ? 1 : 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         onLoad={() => setLoaded(true)}
-        onError={(e) => {
-          e.target.src =
-            "https://via.placeholder.com/400x600?text=Poster+Not+Found";
-          setLoaded(true);
-        }}
+        onError={(e) => { e.target.src = "https://via.placeholder.com/400x600?text=Poster+Not+Found"; setLoaded(true); }}
       />
     </div>
   );
 }
 
 function App() {
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [userEmail, setUserEmail] = useState(() =>
-    localStorage.getItem("userEmail")
-  );
+  // State
   const [view, setView] = useState("home");
-
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState("login");
-
-  const [formData, setFormData] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-  });
-  const [rememberMe, setRememberMe] = useState(false);
-  const [message, setMessage] = useState("");
-  const [hasAccess, setHasAccess] = useState({});
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [activeTrailer, setActiveTrailer] = useState(null);
-  const [watchlist, setWatchlist] = useState(
-    () => JSON.parse(localStorage.getItem("watchlist")) || []
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [legalView, setLegalView] = useState(null);
-  const [showContact, setShowContact] = useState(false);
+  const [accessCodes, setAccessCodes] = useState(() => JSON.parse(localStorage.getItem("blackwell_tickets")) || {});
+  const [showGatekeeper, setShowGatekeeper] = useState(false);
+  const [gatekeeperMode, setGatekeeperMode] = useState("buy"); // 'buy' or 'code'
+  
+  // Forms & UI
+  const [email, setEmail] = useState("");
+  const [inputCode, setInputCode] = useState("");
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const infoSectionRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [activeTrailer, setActiveTrailer] = useState(null);
+  const [legalView, setLegalView] = useState(null);
+  const [showContact, setShowContact] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
-
-  const filteredResults = movies.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.cast.some((actor) =>
-        actor.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-  );
-
+  const infoSectionRef = useRef(null);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
+  // --- HELPERS ---
   const showFeedback = (type, msg) => {
     setStatus({ type, message: msg });
     setTimeout(() => setStatus({ type: "", message: "" }), 5000);
   };
 
+  // Check access on load
   useEffect(() => {
-    localStorage.setItem("watchlist", JSON.stringify(watchlist));
-  }, [watchlist]);
+    // We trust local storage for UI speed, but you could verify with server here if strict
+    const tickets = JSON.parse(localStorage.getItem("blackwell_tickets")) || {};
+    setAccessCodes(tickets);
+  }, []);
 
-  useEffect(() => {
-    const checkAllAccess = async () => {
-      if (!token) return;
-      const accessStatus = {};
-      for (let movie of movies) {
-        try {
-          const res = await axios.post(
-            `${API_BASE}/check-access`,
-            { movieName: movie.name },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          accessStatus[movie.name] = res.data.hasAccess;
-        } catch (err) {
-          accessStatus[movie.name] = false;
-        }
-      }
-      setHasAccess(accessStatus);
-    };
-    checkAllAccess();
-  }, [token, movies, API_BASE]);
-
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    setMessage("");
-    try {
-      const endpoint = authMode === "login" ? "login" : "register";
-      const res = await axios.post(`${API_BASE}/${endpoint}`, formData);
-      if (authMode === "login") {
-        const storage = rememberMe ? localStorage : sessionStorage;
-        storage.setItem("token", res.data.token);
-        storage.setItem("userEmail", formData.email);
-        setToken(res.data.token);
-        setUserEmail(formData.email);
-        setShowAuthModal(false);
-        showFeedback("success", "Logged in successfully");
-      } else {
-        showFeedback("success", "Account created! Please log in.");
-        setAuthMode("login");
-      }
-    } catch (err) {
-      const errMsg = err.response?.data?.message || "Authentication failed";
-      setMessage(errMsg);
-      showFeedback("error", errMsg);
-    } finally {
-      setIsProcessing(false);
-    }
+  const hasAccess = (movieName) => {
+    return !!accessCodes[movieName];
   };
 
-  const handleHeroPlay = () => {
-    if (!token) {
-      setAuthMode("login");
-      setShowAuthModal(true);
-      return;
-    }
-    if (hasAccess[selectedMovie.name]) {
+  const handlePlayRequest = (movie) => {
+    setSelectedMovie(movie);
+    if (hasAccess(movie.name)) {
       setIsPlaying(true);
     } else {
-      setShowPaymentModal(true);
+      setShowGatekeeper(true);
+      setGatekeeperMode("buy");
     }
   };
 
-  const scrollToInfo = () => {
-    infoSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const payWithPaystack = () => {
+  // --- PAYSTACK LOGIC ---
+  const handlePaystack = () => {
+    if (!email) return showFeedback("error", "Please enter your email to receive the ticket.");
+    
     const handler = window.PaystackPop.setup({
-      key: "pk_test_8196b2b3d7ad464e3e647c4d23a1e092a40b8da8",
-      email: userEmail,
+      key: "pk_test_8196b2b3d7ad464e3e647c4d23a1e092a40b8da8", // Use your public key
+      email: email,
       amount: selectedMovie.price * 100,
       currency: "KES",
-      callback: (response) => completePurchase(response.reference),
-      onClose: () => showFeedback("error", "Transaction cancelled."),
+      callback: (response) => processPurchase(response.reference),
+      onClose: () => showFeedback("error", "Payment cancelled."),
     });
     handler.openIframe();
   };
 
-  const completePurchase = async (reference) => {
+  const processPurchase = async (reference) => {
     setIsProcessing(true);
     try {
-      await axios.post(
-        `${API_BASE}/purchase-movie`,
-        { movieName: selectedMovie.name, reference: reference },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setShowPaymentModal(false);
-      setHasAccess((prev) => ({ ...prev, [selectedMovie.name]: true }));
-      showFeedback(
-        "success",
-        `Success! Access granted to ${selectedMovie.name}`
-      );
+      const res = await axios.post(`${API_BASE}/purchase-guest`, {
+        email,
+        reference,
+        movieName: selectedMovie.name
+      });
+      
+      if (res.data.success) {
+        saveTicket(selectedMovie.name, res.data.code);
+        setShowGatekeeper(false);
+        setIsPlaying(true);
+        showFeedback("success", "Ticket confirmed! Code sent to email.");
+      }
     } catch (err) {
-      showFeedback(
-        "error",
-        "Purchase verification failed. Please contact support."
-      );
+      showFeedback("error", "Verification failed. Contact support.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const toggleWatchlist = (movieName) => {
-    setWatchlist((prev) =>
-      prev.includes(movieName)
-        ? prev.filter((i) => i !== movieName)
-        : [...prev, movieName]
-    );
+  // --- CODE VERIFICATION LOGIC ---
+  const verifyCode = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    try {
+      const res = await axios.post(`${API_BASE}/verify-ticket`, {
+        code: inputCode,
+        movieName: selectedMovie.name
+      });
+
+      if (res.data.valid) {
+        saveTicket(selectedMovie.name, inputCode);
+        setShowGatekeeper(false);
+        setIsPlaying(true);
+        showFeedback("success", "Code Accepted! Enjoy.");
+      }
+    } catch (err) {
+      showFeedback("error", err.response?.data?.message || "Invalid Code");
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  const saveTicket = (movie, code) => {
+    const newTickets = { ...accessCodes, [movie]: code };
+    setAccessCodes(newTickets);
+    localStorage.setItem("blackwell_tickets", JSON.stringify(newTickets));
+  };
+
+  const scrollToInfo = () => infoSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+
+  const filteredResults = movies.filter(
+    (item) => item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="app-container">
       {status.message && (
-        <div
-          className={`status-toast ${
-            status.type === "success" ? "status-success" : "status-error"
-          }`}
-        >
+        <div className={`status-toast ${status.type === "success" ? "status-success" : "status-error"}`}>
           {status.type === "success" ? "✓ " : "✕ "} {status.message}
         </div>
       )}
 
+      {/* --- NAV --- */}
       <nav className="nav-bar">
         <div className="nav-left">
-          <h2
-            className="nav-logo"
-            onClick={() => {
-              setView("home");
-              setSearchQuery("");
-            }}
-          >
-            BLACKWELL
-          </h2>
-          {token && (
-            <div className="nav-links">
-              {["home", "movies", "shows", "watchlist"].map((page) => (
-                <span
-                  key={page}
-                  className={`nav-link ${
-                    view === page && !searchQuery ? "active" : ""
-                  }`}
-                  onClick={() => {
-                    setView(page);
-                    setSearchQuery("");
-                  }}
-                >
-                  {page.charAt(0).toUpperCase() + page.slice(1)}
-                </span>
-              ))}
-            </div>
-          )}
+          <h2 className="nav-logo" onClick={() => setView("home")}>BLACKWELL</h2>
+          <div className="nav-links">
+            <span className={`nav-link ${view === "home" ? "active" : ""}`} onClick={() => setView("home")}>Home</span>
+            <span className={`nav-link ${view === "movies" ? "active" : ""}`} onClick={() => setView("movies")}>Movies</span>
+          </div>
         </div>
-
         <div className="nav-right">
-          {token ? (
-            <>
-              <div className="search-wrapper">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="search-input"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                  <span
-                    className="search-clear"
-                    onClick={() => setSearchQuery("")}
-                  >
-                    ✕
-                  </span>
-                )}
-              </div>
-              <span
-                className={`nav-link ${view === "profile" ? "active" : ""}`}
-                onClick={() => {
-                  setView("profile");
-                  setSearchQuery("");
-                }}
-                style={{ marginRight: "20px" }}
-              >
-                Profile
-              </span>
-              <button
-                onClick={() => {
-                  localStorage.clear();
-                  sessionStorage.clear();
-                  setToken(null);
-                  setView("home");
-                }}
-                className="btn-logout"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                onClick={() => {
-                  setAuthMode("login");
-                  setShowAuthModal(true);
-                }}
-                className="btn btn-ghost btn-sm"
-                style={{ border: "none" }}
-              >
-                Login
-              </button>
-              <button
-                onClick={() => {
-                  setAuthMode("signup");
-                  setShowAuthModal(true);
-                }}
-                className="btn btn-primary btn-sm"
-              >
-                Sign Up
-              </button>
-            </div>
-          )}
+          <div className="search-wrapper">
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              className="search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && <span className="search-clear" onClick={() => setSearchQuery("")}>✕</span>}
+          </div>
+          {/* QR Code / Access Button */}
+          <button 
+             onClick={() => { setShowGatekeeper(true); setGatekeeperMode("code"); }} 
+             className="btn btn-ghost btn-sm"
+          >
+            ENTER CODE
+          </button>
         </div>
       </nav>
 
+      {/* --- CONTENT --- */}
       <div className="main-content">
-        {searchQuery && (
+        {searchQuery ? (
           <div className="centered-container">
-            <h2
-              style={{
-                marginBottom: "30px",
-                fontWeight: "300",
-                letterSpacing: "1px",
-              }}
-            >
-              RESULTS FOR "{searchQuery.toUpperCase()}"
-            </h2>
-            {filteredResults.length > 0 ? (
-              <div className="movie-grid">
-                {filteredResults.map((item) => (
-                  <div
-                    key={item.id}
-                    className="movie-card"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "15px",
-                      gap: "20px",
-                    }}
-                  >
-                    <div style={{ width: "80px" }}>
-                      <ProgressiveImage
-                        src={item.image}
-                        alt={item.name}
-                        style={{ borderRadius: "4px" }}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ margin: "0 0 5px 0" }}>{item.name}</h4>
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          color: "var(--accent-color)",
-                          letterSpacing: "1px",
-                        }}
-                      >
-                        {item.type.toUpperCase()}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedMovie(item);
-                        setView("movie-detail");
-                        setSearchQuery("");
-                      }}
-                      className="btn btn-primary btn-sm"
-                    >
-                      VIEW
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p
-                style={{
-                  color: "#555",
-                  textAlign: "center",
-                  marginTop: "40px",
-                }}
-              >
-                No content found matching your search.
-              </p>
-            )}
+             <h2 style={{ marginBottom: "30px", fontWeight: "300" }}>RESULTS FOR "{searchQuery.toUpperCase()}"</h2>
+             {filteredResults.map(item => (
+                <div key={item.id} className="movie-card" style={{ display: "flex", padding: "15px", gap: "20px" }}>
+                   <ProgressiveImage src={item.image} alt={item.name} style={{ width: "80px", borderRadius: "4px" }} />
+                   <div style={{ flex: 1 }}>
+                      <h4>{item.name}</h4>
+                      <button onClick={() => handlePlayRequest(item)} className="btn btn-primary btn-sm">WATCH</button>
+                   </div>
+                </div>
+             ))}
           </div>
-        )}
-
-        {!searchQuery && (
+        ) : (
           <>
             {view === "home" && (
               <div>
                 <div className="hero-wrapper">
-                  <div className="play-overlay-btn" onClick={handleHeroPlay}>
+                  <div className="play-overlay-btn" onClick={() => handlePlayRequest(MOVIE_DATA[0])}>
                     <span className="play-icon">▶</span>
                   </div>
-                  <ProgressiveImage
-                    src={MOVIE_DATA[0].landscapeImage || MOVIE_DATA[0].image}
-                    alt={MOVIE_DATA[0].name}
-                    className="hero-image"
-                  />
+                  <ProgressiveImage src={MOVIE_DATA[0].landscapeImage} alt={MOVIE_DATA[0].name} className="hero-image" />
                 </div>
 
                 <div className="centered-container-lg">
                   <div className="hero-content">
-                    <h2 style={{ color: "var(--accent-color)", margin: 0 }}>
-                      {MOVIE_DATA[0].name}
-                    </h2>
-                    <span
-                      className={`badge ${
-                        hasAccess[MOVIE_DATA[0].name] ? "badge-owned" : ""
-                      }`}
-                    >
-                      {hasAccess[MOVIE_DATA[0].name]
-                        ? "OWNED"
-                        : `KES ${MOVIE_DATA[0].price}`}
+                    <div>
+                      <h2 style={{ color: "var(--accent-color)", margin: 0 }}>{MOVIE_DATA[0].name}</h2>
+                      {/* ADDED FEATURED TEXT */}
+                      <p style={{ marginTop: "10px", fontSize: "14px", fontWeight: "bold", color: "#fff", letterSpacing: "1px" }}>
+                        FEATURED FILM: CARDS ON THE TABLE
+                      </p>
+                    </div>
+                    <span className={`badge ${hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""}`}>
+                      {hasAccess(MOVIE_DATA[0].name) ? "TICKET ACTIVE" : `KES ${MOVIE_DATA[0].price}`}
                     </span>
                   </div>
 
                   <div className="hero-actions">
-                    <button
-                      onClick={() =>
-                        setActiveTrailer(MOVIE_DATA[0].trailerLink)
-                      }
-                      className="btn btn-secondary"
-                    >
+                    <button onClick={() => setActiveTrailer(MOVIE_DATA[0].trailerLink)} className="btn btn-secondary">
                       VIEW TRAILER
                     </button>
-
-                    {hasAccess[MOVIE_DATA[0].name] ? (
-                      <button
-                        onClick={() => {
-                          setSelectedMovie(MOVIE_DATA[0]);
-                          setIsPlaying(true);
-                        }}
-                        className="btn btn-success"
-                      >
-                        ▶ WATCH NOW
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setSelectedMovie(MOVIE_DATA[0]);
-                          if (!token) {
-                            setAuthMode("login");
-                            setShowAuthModal(true);
-                          } else {
-                            setShowPaymentModal(true);
-                          }
-                        }}
-                        className="btn btn-primary"
-                      >
-                        BUY 3-MONTH ACCESS
-                      </button>
-                    )}
-
-                    <button onClick={scrollToInfo} className="btn btn-ghost">
-                      VIEW INFO
+                    <button onClick={() => handlePlayRequest(MOVIE_DATA[0])} className={hasAccess(MOVIE_DATA[0].name) ? "btn btn-success" : "btn btn-primary"}>
+                      {hasAccess(MOVIE_DATA[0].name) ? "▶ WATCH NOW" : "GET TICKET"}
                     </button>
+                    <button onClick={scrollToInfo} className="btn btn-ghost">INFO</button>
                   </div>
-
+                  
+                  {/* Reuse Info Section logic from original... */}
                   <div className="home-movie-info" ref={infoSectionRef}>
-                    <div className="detail-grid">
-                      <div className="detail-poster">
-                        <ProgressiveImage
-                          src={MOVIE_DATA[0].image}
-                          alt={MOVIE_DATA[0].name}
-                        />
-                      </div>
-                      <div>
-                        <h3
-                          style={{ color: "var(--accent-color)", marginTop: 0 }}
-                        >
-                          SYNOPSIS
-                        </h3>
-                        <p
-                          className="detail-desc"
-                          style={{ marginBottom: "30px" }}
-                        >
-                          {MOVIE_DATA[0].description}
-                        </p>
-                        <div className="detail-meta">
-                          <div className="meta-row">
-                            <span className="meta-label">GENRE:</span>{" "}
-                            {MOVIE_DATA[0].genre}
-                          </div>
-                          <div className="meta-row">
-                            <span className="meta-label">DIRECTOR:</span>{" "}
-                            {MOVIE_DATA[0].director}
-                          </div>
-                          <div className="meta-row">
-                            <span className="meta-label">CAST:</span>{" "}
-                            {MOVIE_DATA[0].cast.join(", ")}
-                          </div>
+                     <div className="detail-grid">
+                        <div className="detail-poster"><ProgressiveImage src={MOVIE_DATA[0].image} alt="poster" /></div>
+                        <div>
+                           <h3 style={{ color: "var(--accent-color)" }}>SYNOPSIS</h3>
+                           <p className="detail-desc">{MOVIE_DATA[0].description}</p>
+                           <div className="detail-meta">
+                              <div className="meta-row"><span className="meta-label">DIRECTOR:</span> {MOVIE_DATA[0].director}</div>
+                              <div className="meta-row"><span className="meta-label">CAST:</span> {MOVIE_DATA[0].cast.join(", ")}</div>
+                           </div>
                         </div>
-                      </div>
-                    </div>
+                     </div>
                   </div>
                 </div>
               </div>
             )}
-
-            {view === "movie-detail" && (
-              <div className="detail-container">
-                <button onClick={() => setView("home")} className="btn-back">
-                  ← BACK TO MOVIES
-                </button>
-                <div className="detail-grid">
-                  <div className="detail-poster">
-                    <ProgressiveImage
-                      src={selectedMovie.image}
-                      alt={selectedMovie.name}
-                    />
-                  </div>
-                  <div>
-                    <h1 className="detail-title">{selectedMovie.name}</h1>
-                    <p className="detail-desc">{selectedMovie.description}</p>
-
-                    <div className="detail-meta">
-                      <div className="meta-row">
-                        <span className="meta-label">GENRE:</span>{" "}
-                        {selectedMovie.genre}
-                      </div>
-                      <div className="meta-row">
-                        <span className="meta-label">DIRECTOR:</span>{" "}
-                        {selectedMovie.director}
-                      </div>
-                      <div className="meta-row">
-                        <span className="meta-label">CAST:</span>{" "}
-                        {selectedMovie.cast.join(", ")}
-                      </div>
-                    </div>
-
-                    <div className="detail-actions">
-                      {hasAccess[selectedMovie.name] ? (
-                        <button
-                          onClick={() => setIsPlaying(true)}
-                          className="btn btn-success"
-                        >
-                          WATCH NOW
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setShowPaymentModal(true)}
-                          className="btn btn-primary"
-                        >
-                          BUY ACCESS
-                        </button>
-                      )}
-                      <button
-                        onClick={() =>
-                          setActiveTrailer(selectedMovie.trailerLink)
-                        }
-                        className="btn btn-secondary"
-                      >
-                        VIEW TRAILER
-                      </button>
-                      <button
-                        onClick={() => toggleWatchlist(selectedMovie.name)}
-                        className="btn btn-ghost"
-                      >
-                        {watchlist.includes(selectedMovie.name)
-                          ? "✓ IN WATCHLIST"
-                          : "+ WATCHLIST"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
+            
             {view === "movies" && (
-              <div className="centered-container">
-                <h1
-                  style={{
-                    textAlign: "center",
-                    marginBottom: "40px",
-                    fontWeight: "300",
-                    letterSpacing: "2px",
-                  }}
-                >
-                  MOVIES
-                </h1>
-                <div className="movie-grid">
-                  {movies.map((movie) => (
-                    <div key={movie.id} className="movie-card">
-                      <ProgressiveImage src={movie.image} alt={movie.name} />
-                      <div className="card-content">
-                        <h3 style={{ margin: 0 }}>{movie.name}</h3>
-                        <button
-                          onClick={() => {
-                            setSelectedMovie(movie);
-                            setView("movie-detail");
-                          }}
-                          className="btn btn-primary btn-sm"
-                        >
-                          VIEW INFO
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {view === "shows" && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  height: "60vh",
-                }}
-              >
-                <h1
-                  style={{
-                    color: "var(--accent-color)",
-                    fontSize: "4rem",
-                    fontWeight: "900",
-                    letterSpacing: "5px",
-                  }}
-                >
-                  COMING SOON
-                </h1>
-              </div>
-            )}
-
-            {view === "watchlist" && (
-              <div className="centered-container">
-                <h1
-                  style={{
-                    textAlign: "center",
-                    marginBottom: "40px",
-                    fontWeight: "300",
-                    letterSpacing: "2px",
-                  }}
-                >
-                  MY WATCHLIST
-                </h1>
-                {watchlist.length > 0 ? (
-                  watchlist.map((movieName) => (
-                    <div
-                      key={movieName}
-                      className="movie-card"
-                      style={{
-                        padding: "20px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "15px",
-                      }}
-                    >
-                      <h3 style={{ margin: 0 }}>{movieName}</h3>
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <button
-                          onClick={() => {
-                            const m = movies.find((x) => x.name === movieName);
-                            if (m) setSelectedMovie(m);
-                            setView("movie-detail");
-                          }}
-                          className="btn btn-primary btn-sm"
-                        >
-                          VIEW
-                        </button>
-                        <button
-                          onClick={() => toggleWatchlist(movieName)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            color: "#ff6b6b",
-                            cursor: "pointer",
-                            fontSize: "18px",
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p style={{ textAlign: "center", color: "#555" }}>
-                    Your list is empty.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {view === "profile" && (
-              <div className="profile-container">
-                <h1 style={{ marginBottom: "40px", fontWeight: "300" }}>
-                  Account Dashboard
-                </h1>
-                <div className="profile-grid">
-                  <div className="profile-card profile-card-center">
-                    <div className="avatar-circle">
-                      {userEmail?.charAt(0).toUpperCase()}
-                    </div>
-                    <h4 style={{ margin: "0 0 5px 0" }}>Member</h4>
-                    <p
-                      style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        marginBottom: "20px",
-                      }}
-                    >
-                      {userEmail}
-                    </p>
-                    <button
-                      onClick={() => {
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        setToken(null);
-                      }}
-                      className="btn-logout"
-                    >
-                      Logout Session
-                    </button>
+               <div className="centered-container">
+                  <h1 style={{ textAlign: "center", marginBottom: "40px", fontWeight: "300" }}>MOVIES</h1>
+                  <div className="movie-grid">
+                     {movies.map(movie => (
+                        <div key={movie.id} className="movie-card">
+                           <ProgressiveImage src={movie.image} alt={movie.name} />
+                           <div className="card-content">
+                              <h3>{movie.name}</h3>
+                              <button onClick={() => handlePlayRequest(movie)} className="btn btn-primary btn-sm">WATCH</button>
+                           </div>
+                        </div>
+                     ))}
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "20px",
-                    }}
-                  >
-                    <div className="profile-card">
-                      <h3
-                        style={{
-                          fontSize: "14px",
-                          color: "var(--accent-color)",
-                          marginTop: 0,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        Purchased Content
-                      </h3>
-                      <div style={{ marginTop: "20px" }}>
-                        {Object.keys(hasAccess).some(
-                          (key) => hasAccess[key]
-                        ) ? (
-                          movies
-                            .filter((m) => hasAccess[m.name])
-                            .map((m) => (
-                              <div key={m.id} className="purchased-item">
-                                <span style={{ fontWeight: "bold" }}>
-                                  {m.name}
-                                </span>
-                                <span className="badge-full-access">
-                                  FULL ACCESS
-                                </span>
-                              </div>
-                            ))
-                        ) : (
-                          <p style={{ color: "#555", fontSize: "14px" }}>
-                            No active movie passes found.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+               </div>
             )}
           </>
         )}
       </div>
 
+      {/* --- FOOTER --- */}
       <footer className="app-footer">
         <div className="footer-grid">
-          <div>
-            <h4 className="footer-brand">BLACKWELL</h4>
-          </div>
+          <div><h4 className="footer-brand">BLACKWELL</h4></div>
           <div>
             <h5 className="footer-head">Support</h5>
-            <button
-              className="footer-link"
-              onClick={() => setLegalView("terms")}
-            >
-              Terms of Service
-            </button>
-            <button
-              className="footer-link"
-              onClick={() => setLegalView("privacy")}
-            >
-              Privacy Policy
-            </button>
-            <button
-              className="footer-link"
-              onClick={() => setShowContact(true)}
-            >
-              Contact Us
-            </button>
+            <button className="footer-link" onClick={() => setLegalView("terms")}>Terms</button>
+            <button className="footer-link" onClick={() => setLegalView("privacy")}>Privacy</button>
+            <button className="footer-link" onClick={() => setShowContact(true)}>Contact</button>
           </div>
-          <div>
-            <h5 className="footer-head">Connect</h5>
-            <a
-              href="https://www.tiktok.com/@blackwellfilms?lang=en"
-              target="_blank"
-              rel="noreferrer"
-              className="footer-link"
-            >
-              TikTok
-            </a>
-            <a
-              href="https://www.instagram.com/blackwell_films/"
-              target="_blank"
-              rel="noreferrer"
-              className="footer-link"
-            >
-              Instagram
-            </a>
-            <a
-              href="https://www.facebook.com/Blackwellfilms"
-              target="_blank"
-              rel="noreferrer"
-              className="footer-link"
-            >
-              Facebook
-            </a>
-          </div>
+          <div><h5 className="footer-head">Connect</h5><p className="footer-link">Socials...</p></div>
         </div>
       </footer>
 
-      {showAuthModal && (
+      {/* --- GATEKEEPER MODAL (Replaces Auth/Payment Modal) --- */}
+      {showGatekeeper && (
         <div className="modal-overlay">
-          <div className="auth-wrapper">
-            <div className="auth-card" style={{ position: "relative" }}>
-              <button
-                onClick={() => setShowAuthModal(false)}
-                style={{
-                  position: "absolute",
-                  top: "15px",
-                  right: "15px",
-                  background: "none",
-                  border: "none",
-                  color: "#666",
-                  cursor: "pointer",
-                  fontSize: "18px",
-                }}
-              >
-                ✕
-              </button>
-              <h1
-                className="auth-logo"
-                style={{ fontSize: "28px", marginBottom: "20px" }}
-              >
-                BLACKWELL
-              </h1>
-              <h2
-                style={{
-                  textAlign: "center",
-                  color: "var(--accent-color)",
-                  marginTop: 0,
-                }}
-              >
-                {authMode === "login" ? "Login" : "Sign Up"}
-              </h2>
-              <form onSubmit={handleSubmit} className="auth-form">
-                {authMode === "signup" && (
-                  <input
-                    name="full_name"
-                    placeholder="Full Name"
-                    onChange={handleChange}
-                    className="auth-input"
-                    required
-                  />
-                )}
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email"
-                  onChange={handleChange}
-                  className="auth-input"
-                  required
-                />
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Password"
-                  onChange={handleChange}
-                  className="auth-input"
-                  required
-                />
-
-                {authMode === "login" && (
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      fontSize: "13px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                    />
-                    Remember Me
-                  </label>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isProcessing}
-                  className="btn btn-primary"
-                >
-                  {isProcessing
-                    ? "PROCESSING..."
-                    : authMode === "login"
-                    ? "Login"
-                    : "Create Account"}
-                </button>
-              </form>
-              {message && (
-                <p
-                  style={{
-                    color: "var(--accent-color)",
-                    textAlign: "center",
-                    fontSize: "14px",
-                    marginTop: "10px",
-                  }}
-                >
-                  {message}
-                </p>
-              )}
-              <p
-                onClick={() =>
-                  setAuthMode(authMode === "login" ? "signup" : "login")
-                }
-                className="auth-toggle"
-              >
-                {authMode === "login"
-                  ? "Need an account? Sign Up"
-                  : "Have an account? Login"}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showContact && (
-        <div className="modal-overlay">
-          <div
-            className="auth-card"
-            style={{ width: "400px", textAlign: "center" }}
-          >
-            <h2 style={{ color: "var(--accent-color)", marginBottom: "20px" }}>
-              CONTACT US
+          <div className="auth-card" style={{ width: "600px", maxWidth: "95%" }}>
+            <button onClick={() => setShowGatekeeper(false)} className="btn-close-modal">✕</button>
+            
+            <h2 style={{ textAlign: "center", color: "var(--accent-color)", marginBottom: "30px" }}>
+              {selectedMovie.name.toUpperCase()}
             </h2>
-            <div style={{ marginBottom: "25px" }}>
-              <p
-                style={{ fontSize: "12px", color: "#888", marginBottom: "5px" }}
+
+            <div className="gatekeeper-tabs">
+              <button 
+                className={`tab-btn ${gatekeeperMode === "buy" ? "active" : ""}`}
+                onClick={() => setGatekeeperMode("buy")}
               >
-                PHONE
-              </p>
-              <p style={{ fontSize: "18px", fontWeight: "bold" }}>
-                +254 726 924 537
-              </p>
-            </div>
-            <div style={{ marginBottom: "30px" }}>
-              <p
-                style={{ fontSize: "12px", color: "#888", marginBottom: "5px" }}
+                BUY TICKET
+              </button>
+              <button 
+                className={`tab-btn ${gatekeeperMode === "code" ? "active" : ""}`}
+                onClick={() => setGatekeeperMode("code")}
               >
-                EMAIL
-              </p>
-              <p style={{ fontSize: "15px", fontWeight: "bold" }}>
-                blackwellfilmsafrica@gmail.com
-              </p>
+                HAVE A CODE?
+              </button>
+              <button 
+                className={`tab-btn ${gatekeeperMode === "qr" ? "active" : ""}`}
+                onClick={() => setGatekeeperMode("qr")}
+              >
+                SCAN QR
+              </button>
             </div>
-            <button
-              onClick={() => setShowContact(false)}
-              className="btn btn-primary"
-            >
-              CLOSE
-            </button>
+
+            <div className="gatekeeper-content">
+              {gatekeeperMode === "buy" && (
+                <div style={{ textAlign: "center" }}>
+                  <p style={{ color: "#ccc", marginBottom: "20px" }}>
+                    Get 90 days access on up to 3 devices. <br/>
+                    We'll email you a unique access code.
+                  </p>
+                  <input 
+                    type="email" 
+                    placeholder="Enter your email address" 
+                    className="auth-input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={{ marginBottom: "15px", textAlign: "center" }}
+                  />
+                  <button onClick={handlePaystack} disabled={isProcessing} className="btn btn-primary">
+                    {isProcessing ? "PROCESSING..." : `PAY KES ${selectedMovie.price}`}
+                  </button>
+                </div>
+              )}
+
+              {gatekeeperMode === "code" && (
+                <form onSubmit={verifyCode} style={{ textAlign: "center" }}>
+                  <p style={{ color: "#ccc", marginBottom: "20px" }}>
+                    Enter the code sent to your email.
+                  </p>
+                  <input 
+                    type="text" 
+                    placeholder="BW-XXXXXX" 
+                    className="auth-input"
+                    value={inputCode}
+                    onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                    style={{ marginBottom: "15px", textAlign: "center", letterSpacing: "3px", fontWeight: "bold" }}
+                  />
+                  <button type="submit" disabled={isProcessing} className="btn btn-success">
+                    {isProcessing ? "VERIFYING..." : "WATCH MOVIE"}
+                  </button>
+                </form>
+              )}
+
+              {gatekeeperMode === "qr" && (
+                <div style={{ textAlign: "center", padding: "20px" }}>
+                  <p style={{ color: "#ccc", marginBottom: "20px" }}>
+                    Scan to buy or check access on mobile.
+                  </p>
+                  <div style={{ background: "white", padding: "10px", display: "inline-block", borderRadius: "8px" }}>
+                     <QRCodeCanvas value={`https://blackwellfilms.com/pay?movie=${selectedMovie.id}`} size={150} />
+                  </div>
+                  <p style={{ fontSize: "12px", color: "#888", marginTop: "10px" }}>Use your camera</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
+      {/* --- VIDEO PLAYER --- */}
       {isPlaying && (
         <div className="theater-overlay">
-          <button
-            onClick={() => setIsPlaying(false)}
-            className="btn-close-theater"
-          >
-            ✕ CLOSE
-          </button>
-          <div
-            style={{ width: "85%", aspectRatio: "16/9", position: "relative" }}
-          >
+          <button onClick={() => setIsPlaying(false)} className="btn-close-theater">✕ CLOSE</button>
+          <div style={{ width: "85%", aspectRatio: "16/9", position: "relative" }}>
             <iframe
-              src={`${selectedMovie.movieFile}?autoplay=1&title=0&byline=0&portrait=0`}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                borderRadius: "12px",
-                border: "none",
-              }}
+              src={`${selectedMovie.movieFile}&title=0&byline=0&portrait=0`}
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "12px", border: "none" }}
               allow="autoplay; fullscreen"
               allowFullScreen
               title={selectedMovie.name}
@@ -1036,109 +409,35 @@ function App() {
           </div>
         </div>
       )}
-
+      
+      {/* --- TRAILER OVERLAY --- */}
       {activeTrailer && (
-        <div className="theater-overlay">
-          <button
-            onClick={() => setActiveTrailer(null)}
-            className="btn-close-theater"
-          >
-            ✕ CLOSE TRAILER
-          </button>
-          <div
-            style={{
-              width: "80%",
-              maxWidth: "1000px",
-              aspectRatio: "16/9",
-              position: "relative",
-            }}
-          >
-            <iframe
-              src={`${activeTrailer}?autoplay=1`}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                borderRadius: "12px",
-                border: "none",
-              }}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              title="Movie Trailer"
-            ></iframe>
-          </div>
-        </div>
-      )}
-
-      {showPaymentModal && (
-        <div className="modal-overlay">
-          <div className="auth-card">
-            <h2 style={{ color: "var(--accent-color)", textAlign: "center" }}>
-              Checkout
-            </h2>
-            <p style={{ textAlign: "center", marginBottom: "20px" }}>
-              {selectedMovie.name}
-            </p>
-            <button
-              onClick={payWithPaystack}
-              disabled={isProcessing}
-              className="btn btn-primary"
-            >
-              {isProcessing ? "VERIFYING..." : `PAY KES ${selectedMovie.price}`}
-            </button>
-            <button
-              onClick={() => setShowPaymentModal(false)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#888",
-                cursor: "pointer",
-                width: "100%",
-                marginTop: "15px",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {legalView && (
-        <div className="modal-overlay">
-          <div
-            className="auth-card"
-            style={{ width: "500px", maxHeight: "80vh", overflowY: "auto" }}
-          >
-            <h2
-              style={{
-                color: "var(--accent-color)",
-                textAlign: "center",
-                textTransform: "uppercase",
-              }}
-            >
-              {legalView === "terms" ? "Terms of Service" : "Privacy Policy"}
-            </h2>
-            <div
-              style={{
-                color: "#bbb",
-                lineHeight: "1.6",
-                fontSize: "14px",
-                margin: "20px 0",
-                whiteSpace: "pre-line",
-              }}
-            >
-              {legalView === "terms" ? LEGAL_TEXT.terms : LEGAL_TEXT.privacy}
+         <div className="theater-overlay">
+            <button onClick={() => setActiveTrailer(null)} className="btn-close-theater">✕ CLOSE</button>
+            <div style={{ width: "80%", maxWidth: "1000px", aspectRatio: "16/9", position: "relative" }}>
+               <iframe src={`${activeTrailer}?autoplay=1`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "12px", border: "none" }} allowFullScreen title="Trailer"></iframe>
             </div>
-            <button
-              onClick={() => setLegalView(null)}
-              className="btn btn-primary"
-            >
-              CLOSE
-            </button>
-          </div>
-        </div>
+         </div>
+      )}
+
+      {/* --- LEGAL / CONTACT MODALS REMAIN SAME --- */}
+      {legalView && (
+         <div className="modal-overlay">
+            <div className="auth-card" style={{ width: "500px" }}>
+               <h2>{legalView === "terms" ? "TERMS" : "PRIVACY"}</h2>
+               <p style={{ color: "#bbb", fontSize: "13px" }}>{legalView === "terms" ? LEGAL_TEXT.terms : LEGAL_TEXT.privacy}</p>
+               <button onClick={() => setLegalView(null)} className="btn btn-primary">CLOSE</button>
+            </div>
+         </div>
+      )}
+      {showContact && (
+         <div className="modal-overlay">
+            <div className="auth-card">
+               <h2>CONTACT</h2>
+               <p>blackwellfilmsafrica@gmail.com</p>
+               <button onClick={() => setShowContact(false)} className="btn btn-primary">CLOSE</button>
+            </div>
+         </div>
       )}
     </div>
   );

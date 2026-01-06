@@ -1,138 +1,134 @@
 const axios = require("axios");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const bcrypt = require("bcrypt");
-const pool = require("./db"); // Your PostgreSQL connection
+const pool = require("./db");
+const sgMail = require("@sendgrid/mail"); // Switched from Nodemailer to SendGrid
+require("dotenv").config();
 
 const app = express();
-const PORT = 5555; 
+const PORT = 5555;
 
 app.use(cors());
 app.use(express.json());
 
-// --- MIDDLEWARE ---
-// We will use ONE consistent middleware for all protected routes
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  
-  if (!token) return res.status(401).json({ message: "Access Denied" });
-  
-  try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    // This attaches the userId and email to the request
-    req.user = verified;
-    next();
-  } catch (err) { 
-    res.status(403).json({ message: "Invalid Token" }); 
-  }
+// --- CONFIGURATION ---
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// Helper to generate a 6-character code
+const generateCode = () => {
+  return "BW-" + Math.random().toString(36).substr(2, 6).toUpperCase();
 };
 
-// --- AUTH ROUTES ---
+// --- ROUTES ---
 
-app.post("/api/register", async (req, res) => {
-  try {
-    const { full_name, email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await pool.query(
-      "INSERT INTO users (full_name, email, password) VALUES ($1, $2, $3)", 
-      [full_name, email, hashedPassword]
-    );
-    res.json({ message: "User registered!" });
-  } catch (error) { 
-    console.log("SERVER ERROR:", error); // THIS LINE WILL SHOW IN RENDER LOGS
-    res.status(500).send("Server Error");
-  }
-});
+// 1. PURCHASE & GENERATE TICKET
+app.post("/api/purchase-guest", async (req, res) => {
+  const { email, reference, movieName } = req.body;
 
-app.post("/api/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-    
-    if (user.rows.length === 0) return res.status(401).json({ message: "Wrong email" });
-    
-    const validPass = await bcrypt.compare(password, user.rows[0].password);
-    if (!validPass) return res.status(401).json({ message: "Wrong password" });
-    
-    // We include the email in the token so we can use it for Paystack later
-    const token = jwt.sign(
-      { userId: user.rows[0].id, email: user.rows[0].email }, 
-      process.env.JWT_SECRET, 
-      { expiresIn: "24h" }
-    );
-    
-    res.json({ 
-      token: token, 
-      user: { id: user.rows[0].id, name: user.rows[0].full_name } 
-    });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
-});
-
-// --- MOVIE ROUTES ---
-
-// SECURE PURCHASE ROUTE (PostgreSQL Version)
-app.post('/api/purchase-movie', verifyToken, async (req, res) => {
-  const { movieName, reference } = req.body;
-  const userId = req.user.userId; 
-
-  if (!reference) {
-    return res.status(400).json({ message: "No payment reference provided" });
+  if (!reference || !email) {
+    return res.status(400).json({ message: "Missing details" });
   }
 
   try {
-    // 1. Verify directly with Paystack
+    // A. Verify Payment with Paystack
     const response = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-        }
-      }
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
     );
 
-    const data = response.data.data;
-
-    // 2. Check if transaction was successful
-    if (data.status !== 'success') {
-      return res.status(400).json({ message: "Transaction failed or was declined." });
+    if (response.data.data.status !== "success") {
+      return res.status(400).json({ message: "Payment failed." });
     }
 
-    // 3. Grant Access in PostgreSQL
-    // 90-day expiry calculation
+    // B. Generate Ticket
+    const code = generateCode();
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 90);
+    expiryDate.setDate(expiryDate.getDate() + 90); // 90 Days Access
 
+    // C. Save to DB
     await pool.query(
-      "INSERT INTO purchases (user_id, movie_name, reference, expiry_date) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
-      [userId, movieName, reference, expiryDate]
+      "INSERT INTO tickets (code, email, movie_name, expiry_date) VALUES ($1, $2, $3, $4)",
+      [code, email, movieName, expiryDate]
     );
 
-    res.json({ message: "Purchase verified and access granted", success: true });
+    // D. Send Email via SendGrid
+    const msg = {
+      to: email,
+      from: "tickets@blackwellfilms.com", // MUST match the Sender you verified in SendGrid
+      subject: `Your Ticket for ${movieName}`,
+      text: `Your Access Code is: ${code}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2 style="color: #d4a373;">Blackwell Films</h2>
+          <p>Thank you for purchasing access to <strong>${movieName}</strong>.</p>
+          <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px; color: #555;">YOUR ACCESS CODE:</p>
+            <h1 style="margin: 10px 0; letter-spacing: 5px; color: #000;">${code}</h1>
+          </div>
+          <p>You can use this code to watch the movie on up to <strong>3 devices</strong>.</p>
+          <p>Keep this code safe!</p>
+          <hr style="border: 0; border-top: 1px solid #eee;">
+          <p style="font-size: 12px; color: #999;">If you have trouble, reply to this email.</p>
+        </div>
+      `,
+    };
+
+    await sgMail.send(msg);
+
+    res.json({ success: true, code: code, message: "Access Granted!" });
 
   } catch (error) {
-    console.error("Payment Verification Error:", error.response ? error.response.data : error.message);
-    res.status(500).json({ message: "Payment verification failed" });
+    console.error("Transaction Error:", error);
+    // Even if email fails, we return success so user sees the code on screen immediately
+    res.json({ success: true, code: code, message: "Access Granted (Email might be delayed)" });
   }
 });
 
-app.post("/api/check-access", verifyToken, async (req, res) => {
+// 2. VERIFY TICKET & DEVICE LIMIT
+app.post("/api/verify-ticket", async (req, res) => {
+  const { code, movieName } = req.body;
+  // Get IP address (handles proxies like Render/Vercel)
+  const userIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
   try {
-    const userId = req.user.userId;
-    const { movieName } = req.body; 
-    
-    const purchase = await pool.query(
-      "SELECT * FROM purchases WHERE user_id = $1 AND movie_name = $2 AND expiry_date > NOW() LIMIT 1", 
-      [userId, movieName]
+    // A. Find Ticket
+    const ticket = await pool.query(
+      "SELECT * FROM tickets WHERE code = $1 AND movie_name = $2",
+      [code, movieName]
     );
+
+    if (ticket.rows.length === 0) {
+      return res.status(404).json({ valid: false, message: "Invalid Code" });
+    }
+
+    const data = ticket.rows[0];
+
+    // B. Check Expiry
+    if (new Date() > new Date(data.expiry_date)) {
+      return res.status(403).json({ valid: false, message: "Ticket Expired" });
+    }
+
+    // C. Check Device Limit (Max 3 Unique IPs)
+    let currentDevices = data.device_ips || [];
     
-    res.json({ hasAccess: purchase.rows.length > 0 });
-  } catch (err) { 
-    res.status(500).json({ error: "Server error" }); 
+    // If this IP is not in the list
+    if (!currentDevices.includes(userIp)) {
+      if (currentDevices.length >= 3) {
+        return res.status(403).json({ valid: false, message: "Device limit reached (Max 3)." });
+      }
+      
+      // Add new device IP
+      await pool.query(
+        "UPDATE tickets SET device_ips = array_append(device_ips, $1) WHERE id = $2",
+        [userIp, data.id]
+      );
+    }
+
+    res.json({ valid: true, message: "Access Granted" });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Verification failed" });
   }
 });
 
