@@ -11,14 +11,34 @@ const MOVIE_DATA = [
     price: 250,
     description:
       "An ex-couple team up to rob the gate collections at a Christmas event in 1992 Nairobi, but their layers of unresolved issues land them in police custody.",
-    cast: ["Nyakundi Isaboke, Shirleen Wangari, Mufasa Poet, Murunyu Duncan"],
-    director: "Victor Gatonye",
+    // Cast link data updated
+    cast: [
+      {
+        name: "Nyakundi Isaboke",
+        link: "https://www.instagram.com/nyakundi_isaboke/",
+      },
+      {
+        name: "Shirleen Wangari",
+        link: "https://www.facebook.com/shirleenwangarikiura",
+      },
+      { name: "Mufasa Poet", link: "https://www.instagram.com/mufasapoet" },
+      {
+        name: "Murunyu Duncan",
+        link: "https://www.facebook.com/SirRunyu/?locale=de_DE",
+      },
+    ],
+    // Director link data updated
+    director: {
+      name: "Victor Gatonye",
+      link: "https://www.linkedin.com/in/victor-gatonye-14a7433a/?originalSubdomain=ke",
+    },
     genre: "Romantic Drama, Comedy",
     trailerLink: "https://www.youtube.com/embed/Wjmm1p9h-TA",
     movieFile:
       "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
     image: "/COTTposter1.jpg",
-    landscapeImage: "/COTTP2.jpg",
+    landscapeImage: "/beth&jackso.jpg", // Updated Image
+    imdbLink: "https://www.imdb.com/title/tt38939205/", // Added IMDb Link
     isFeatured: true,
     type: "movie",
   },
@@ -107,7 +127,6 @@ function App() {
     }
   };
 
-  // Navigates to dedicated Info Page
   const handleViewInfo = (movie) => {
     setSelectedMovie(movie);
     setView("movie-details");
@@ -302,21 +321,14 @@ function App() {
                 <div className="centered-container-lg">
                   <div className="hero-content">
                     <div>
-                      <h2
-                        style={{
-                          color: "var(--accent-color)",
-                          margin: 0,
-                          fontSize: "4rem",
-                          lineHeight: "1.1",
-                        }}
-                      >
-                        {MOVIE_DATA[0].name}
-                      </h2>
+                      {/* Font changed to Playfair, size reduced, centered in CSS */}
+                      <h2 className="hero-title">{MOVIE_DATA[0].name}</h2>
                     </div>
                     <span
                       className={`badge ${
                         hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
                       }`}
+                      style={{ marginTop: "15px" }}
                     >
                       {hasAccess(MOVIE_DATA[0].name)
                         ? "ACCESS GRANTED"
@@ -330,6 +342,7 @@ function App() {
                         setActiveTrailer(MOVIE_DATA[0].trailerLink)
                       }
                       className="btn btn-secondary"
+                      style={{ maxWidth: "180px" }}
                     >
                       VIEW TRAILER
                     </button>
@@ -340,14 +353,33 @@ function App() {
                           ? "btn btn-success"
                           : "btn btn-primary"
                       }
+                      style={{ maxWidth: "180px" }}
                     >
                       {hasAccess(MOVIE_DATA[0].name)
                         ? "▶ WATCH NOW"
                         : "BUY ACCESS"}
                     </button>
-                    <button onClick={scrollToInfo} className="btn btn-ghost">
+                    <button
+                      onClick={scrollToInfo}
+                      className="btn btn-ghost"
+                      style={{ maxWidth: "180px" }}
+                    >
                       VIEW INFO
                     </button>
+                    <a
+                      href={MOVIE_DATA[0].imdbLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-imdb"
+                      style={{
+                        maxWidth: "180px",
+                        textDecoration: "none",
+                        textAlign: "center",
+                        padding: "16px",
+                      }}
+                    >
+                      IMDb
+                    </a>
                   </div>
 
                   <div className="home-movie-info" ref={infoSectionRef}>
@@ -358,11 +390,12 @@ function App() {
                           alt="poster"
                         />
                       </div>
-                      <div>
+                      <div className="info-font">
                         <h3
                           style={{
                             color: "var(--accent-color)",
                             fontSize: "2rem",
+                            fontFamily: "Montserrat, sans-serif",
                           }}
                         >
                           SYNOPSIS
@@ -377,7 +410,14 @@ function App() {
                           <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>
                             <span className="meta-value">
-                              {MOVIE_DATA[0].director}
+                              <a
+                                href={MOVIE_DATA[0].director.link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="cast-link"
+                              >
+                                {MOVIE_DATA[0].director.name}
+                              </a>
                             </span>
                           </div>
                           <div className="meta-row">
@@ -389,7 +429,21 @@ function App() {
                           <div className="meta-row">
                             <span className="meta-label">CAST:</span>
                             <span className="meta-value">
-                              {MOVIE_DATA[0].cast.join(", ")}
+                              {MOVIE_DATA[0].cast.map((member, index) => (
+                                <React.Fragment key={index}>
+                                  <a
+                                    href={member.link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="cast-link"
+                                  >
+                                    {member.name}
+                                  </a>
+                                  {index < MOVIE_DATA[0].cast.length - 1
+                                    ? ", "
+                                    : ""}
+                                </React.Fragment>
+                              ))}
                             </span>
                           </div>
                         </div>
@@ -408,6 +462,7 @@ function App() {
                     marginBottom: "40px",
                     fontWeight: "300",
                     letterSpacing: "2px",
+                    fontFamily: "Playfair Display, serif",
                   }}
                 >
                   MOVIES
@@ -421,7 +476,9 @@ function App() {
                         style={{ height: "400px" }}
                       />
                       <div className="card-content">
-                        <h3>{movie.name}</h3>
+                        <h3 style={{ fontFamily: "Playfair Display, serif" }}>
+                          {movie.name}
+                        </h3>
                         <div style={{ display: "flex", gap: "10px" }}>
                           <button
                             onClick={() => handlePlayRequest(movie)}
@@ -445,7 +502,7 @@ function App() {
               </div>
             )}
 
-            {/* --- NEW DEDICATED MOVIE INFO PAGE --- */}
+            {/* --- MOVIE INFO PAGE --- */}
             {view === "movie-details" && selectedMovie && (
               <div
                 className="centered-container-lg"
@@ -467,12 +524,13 @@ function App() {
                   <div className="detail-poster">
                     <ProgressiveImage src={selectedMovie.image} alt="poster" />
                   </div>
-                  <div>
+                  <div className="info-font">
                     <h1
                       style={{
                         fontSize: "3rem",
                         margin: "0 0 10px 0",
                         color: "var(--accent-color)",
+                        fontFamily: "Playfair Display, serif",
                       }}
                     >
                       {selectedMovie.name}
@@ -506,7 +564,14 @@ function App() {
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
                         <span className="meta-value">
-                          {selectedMovie.director}
+                          <a
+                            href={selectedMovie.director.link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="cast-link"
+                          >
+                            {selectedMovie.director.name}
+                          </a>
                         </span>
                       </div>
                       <div className="meta-row">
@@ -518,7 +583,21 @@ function App() {
                       <div className="meta-row">
                         <span className="meta-label">CAST:</span>
                         <span className="meta-value">
-                          {selectedMovie.cast.join(", ")}
+                          {selectedMovie.cast.map((member, index) => (
+                            <React.Fragment key={index}>
+                              <a
+                                href={member.link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="cast-link"
+                              >
+                                {member.name}
+                              </a>
+                              {index < selectedMovie.cast.length - 1
+                                ? ", "
+                                : ""}
+                            </React.Fragment>
+                          ))}
                         </span>
                       </div>
                     </div>
@@ -528,6 +607,7 @@ function App() {
                         marginTop: "30px",
                         display: "flex",
                         gap: "15px",
+                        flexWrap: "wrap",
                       }}
                     >
                       <button
@@ -550,6 +630,22 @@ function App() {
                           TRAILER
                         </button>
                       )}
+                      {selectedMovie.imdbLink && (
+                        <a
+                          href={selectedMovie.imdbLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-imdb"
+                          style={{
+                            maxWidth: "180px",
+                            textDecoration: "none",
+                            textAlign: "center",
+                            padding: "16px",
+                          }}
+                        >
+                          IMDb
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -567,6 +663,7 @@ function App() {
                     fontSize: "3rem",
                     fontWeight: "300",
                     letterSpacing: "5px",
+                    fontFamily: "Playfair Display, serif",
                   }}
                 >
                   COMING SOON
@@ -659,6 +756,7 @@ function App() {
                 textAlign: "center",
                 color: "var(--accent-color)",
                 marginBottom: "30px",
+                fontFamily: "Playfair Display, serif",
               }}
             >
               {selectedMovie?.name.toUpperCase()}
@@ -850,7 +948,13 @@ function App() {
             className="auth-card"
             style={{ width: "600px", maxHeight: "80vh", overflowY: "auto" }}
           >
-            <h2 style={{ textAlign: "center", color: "var(--accent-color)" }}>
+            <h2
+              style={{
+                textAlign: "center",
+                color: "var(--accent-color)",
+                fontFamily: "Playfair Display, serif",
+              }}
+            >
               {legalView === "terms" ? "TERMS OF SERVICE" : "PRIVACY POLICY"}
             </h2>
             <div
@@ -876,7 +980,7 @@ function App() {
       {showContact && (
         <div className="modal-overlay">
           <div className="auth-card">
-            <h2>CONTACT</h2>
+            <h2 style={{ fontFamily: "Playfair Display, serif" }}>CONTACT</h2>
             <p>blackwellfilmsafrica@gmail.com</p>
             <button
               onClick={() => setShowContact(false)}
