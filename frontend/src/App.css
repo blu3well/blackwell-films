@@ -38,6 +38,11 @@ html {
   min-height: 100vh;
 }
 
+/* FIX: Added padding to ensure content never touches the footer */
+.main-content {
+  padding-bottom: 50px;
+}
+
 /* --- HERO SECTION (REVERTED TO ORIGINAL FEEL) --- */
 .hero-wrapper {
   position: relative;
@@ -487,10 +492,11 @@ html {
   border-bottom: 2px solid var(--accent-color);
 }
 
+/* REDUCED FOOTER SIZE: Padding changed from 60px to 30px */
 .app-footer {
   background-color: #0f0f0f;
   border-top: 1px solid #222;
-  padding: 60px 0;
+  padding: 30px 0;
   margin-top: auto;
 }
 .footer-grid {

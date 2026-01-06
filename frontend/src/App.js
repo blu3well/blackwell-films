@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { QRCodeCanvas } from "qrcode.react";
 import emailjs from "@emailjs/browser";
@@ -105,7 +105,6 @@ function App() {
 
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
-  const infoSectionRef = useRef(null);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
   const showFeedback = (type, msg) => {
@@ -177,7 +176,7 @@ function App() {
           code: res.data.code,
           to_email: recipientEmail,
           to_name: recipientEmail,
-          message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwell-films.onrender.com`,
+          message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwell-films.vercel.app`,
         };
 
         emailjs
@@ -254,9 +253,6 @@ function App() {
     setAccessCodes(newTickets);
     localStorage.setItem("blackwell_tickets", JSON.stringify(newTickets));
   };
-
-  const scrollToInfo = () =>
-    infoSectionRef.current?.scrollIntoView({ behavior: "smooth" });
 
   const filteredResults = movies.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -412,7 +408,7 @@ function App() {
                         : "BUY ACCESS"}
                     </button>
                     <button
-                      onClick={scrollToInfo}
+                      onClick={() => handleViewInfo(MOVIE_DATA[0])}
                       className="btn btn-ghost"
                       style={{ maxWidth: "180px" }}
                     >
@@ -434,7 +430,7 @@ function App() {
                     </a>
                   </div>
 
-                  <div className="home-movie-info" ref={infoSectionRef}>
+                  <div className="home-movie-info">
                     <div className="detail-grid">
                       <div className="detail-poster">
                         <ProgressiveImage
@@ -685,7 +681,6 @@ function App() {
                       </div>
                     </div>
 
-                    {/* --- ACTION BUTTONS MOVED UP HERE --- */}
                     <div
                       style={{
                         marginTop: "30px",
@@ -732,7 +727,6 @@ function App() {
                       )}
                     </div>
 
-                    {/* --- RATINGS SECTION MOVED DOWN HERE --- */}
                     <div
                       className="rating-section"
                       style={{
