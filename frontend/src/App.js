@@ -87,8 +87,9 @@ function ProgressiveImage({ src, alt, className, style, onClick }) {
 }
 
 function App() {
-  const [loading, setLoading] = useState(true); // Splash screen state
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState("home");
+  const [previousView, setPreviousView] = useState("home"); // Track history
   const [accessCodes, setAccessCodes] = useState(
     () => JSON.parse(localStorage.getItem("blackwell_tickets")) || {}
   );
@@ -103,7 +104,11 @@ function App() {
   const [activeTrailer, setActiveTrailer] = useState(null);
   const [legalView, setLegalView] = useState(null);
   const [showContact, setShowContact] = useState(false);
+
+  // Search State
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+
   const [existingTicketCode, setExistingTicketCode] = useState(null);
 
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
@@ -117,7 +122,6 @@ function App() {
 
   // --- SPLASH SCREEN TIMER ---
   useEffect(() => {
-    // Show splash for 3 seconds then load app
     const timer = setTimeout(() => {
       setLoading(false);
     }, 3000);
@@ -129,15 +133,15 @@ function App() {
     setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
 
-  // Slideshow
+  // Slideshow - Starts ONLY after loading to prevent glitch
   useEffect(() => {
-    if (view === "home") {
+    if (!loading && view === "home") {
       const interval = setInterval(() => {
         setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [view]);
+  }, [loading, view]);
 
   const fetchRatings = useCallback(
     async (movieName) => {
@@ -176,9 +180,14 @@ function App() {
   };
 
   const handleViewInfo = (movie) => {
+    setPreviousView(view); // Save where we came from
     setSelectedMovie(movie);
     setView("movie-details");
     window.scrollTo(0, 0);
+  };
+
+  const handleBack = () => {
+    setView(previousView);
   };
 
   const handlePreCheckPurchase = async () => {
@@ -249,7 +258,7 @@ function App() {
   const handleResendCode = () => {
     if (!existingTicketCode || !email) return;
     setIsProcessing(true);
-
+    // Send email then switch tab
     const SERVICE_ID = "service_9qvnylt";
     const TEMPLATE_ID = "template_f43l5cc";
     const PUBLIC_KEY = "RpZwEJtbEPw4skmFZ";
@@ -259,7 +268,7 @@ function App() {
       code: existingTicketCode,
       to_email: email,
       to_name: email,
-      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwell-films.onrender.com`,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwell-films.vercel.app`,
     };
 
     emailjs
@@ -420,19 +429,21 @@ function App() {
           </div>
         </div>
         <div className="nav-right">
+          {/* SEARCH ICON TOGGLE */}
           <div className="search-wrapper">
             <input
               type="text"
               placeholder="Search..."
-              className="search-input"
+              className={`search-input ${searchOpen ? "open" : ""}`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            {searchQuery && (
-              <span className="search-clear" onClick={() => setSearchQuery("")}>
-                ✕
-              </span>
-            )}
+            <button
+              className="search-icon-btn"
+              onClick={() => setSearchOpen(!searchOpen)}
+            >
+              🔍
+            </button>
           </div>
         </div>
       </nav>
@@ -551,7 +562,6 @@ function App() {
                     </a>
                   </div>
 
-                  {/* ADDED GLOSSY OUTLINE CLASS */}
                   <div className="home-movie-info glossy-card">
                     <div className="detail-grid">
                       <div className="detail-poster">
@@ -595,6 +605,7 @@ function App() {
                               {MOVIE_DATA[0].year}
                             </span>
                           </div>
+                          {/* DIRECTOR MOVED ABOVE GENRE */}
                           <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>
                             <span className="meta-value">
@@ -639,7 +650,7 @@ function App() {
                     </div>
                   </div>
 
-                  {/* RATING CARD: Moved down and Glossy */}
+                  {/* RATING CARD */}
                   <div
                     className="centered-container-lg"
                     style={{
@@ -775,7 +786,7 @@ function App() {
                 style={{ marginTop: "40px" }}
               >
                 <button
-                  onClick={() => setView("movies")}
+                  onClick={handleBack}
                   className="btn-back"
                   style={{
                     width: "auto",
@@ -783,7 +794,7 @@ function App() {
                     marginBottom: "30px",
                   }}
                 >
-                  ← BACK TO MOVIES
+                  ← BACK
                 </button>
 
                 <div className="detail-grid">
@@ -840,6 +851,7 @@ function App() {
                         <span className="meta-label">YEAR:</span>
                         <span className="meta-value">{selectedMovie.year}</span>
                       </div>
+                      {/* DIRECTOR MOVED ABOVE GENRE */}
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
                         <span className="meta-value">
@@ -1027,8 +1039,6 @@ function App() {
             </p>
           </div>
           <div style={{ textAlign: "center" }}>
-            {" "}
-            {/* Centered Socials */}
             <h5 className="footer-head">Socials</h5>
             <a
               href="https://www.tiktok.com/@blackwellfilms?lang=en"
@@ -1056,8 +1066,6 @@ function App() {
             </a>
           </div>
           <div style={{ textAlign: "right" }}>
-            {" "}
-            {/* Right Aligned Support */}
             <h5 className="footer-head">Support</h5>
             <button
               className="footer-link"

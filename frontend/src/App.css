@@ -96,7 +96,7 @@ html {
   height: 85vh;
   overflow: hidden;
   margin-bottom: 0;
-  background-color: #000;
+  background-color: #000; /* Fixes white flash */
 }
 
 .hero-slide {
@@ -204,34 +204,47 @@ html {
   border-bottom: 2px solid var(--accent-color);
 }
 
-/* --- SEARCH --- */
+/* --- SEARCH (UPDATED) --- */
 .search-wrapper {
   position: relative;
   margin-right: 15px;
+  display: flex;
+  align-items: center;
 }
+.search-icon-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #fff;
+  padding: 10px;
+  z-index: 2;
+  transition: color 0.3s;
+}
+.search-icon-btn:hover {
+  color: var(--accent-color);
+}
+
 .search-input {
   background: var(--surface-color);
   border: 1px solid #333;
   color: white;
-  padding: 8px 35px 8px 15px;
+  padding: 0;
   border-radius: 20px;
   outline: none;
-  transition: var(--transition-main);
-  width: 160px;
+  transition: all 0.4s ease;
+  width: 0;
+  opacity: 0; /* Hidden by default */
+  position: absolute;
+  right: 0;
   font-size: 13px;
 }
-.search-input:focus {
+.search-input.open {
+  width: 200px;
+  opacity: 1;
+  padding: 8px 35px 8px 15px;
   border-color: var(--accent-color);
-  width: 220px;
-}
-.search-clear {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #666;
-  font-size: 12px;
+  right: 40px; /* Push to left of icon */
 }
 
 /* --- BUTTONS --- */
@@ -302,12 +315,12 @@ html {
   color: #000;
 }
 
-/* --- RATING BUTTONS (Updated) --- */
+/* --- RATING BUTTONS --- */
 .rating-btn {
   background: transparent;
-  border: none; /* Removed circle */
+  border: none;
   color: #888;
-  font-size: 28px; /* Slightly larger */
+  font-size: 28px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -520,7 +533,7 @@ html {
 .rating-card-home {
   max-width: 500px;
   margin: 30px auto;
-  padding: 25px; /* Spacing handled inline for top margin */
+  padding: 25px;
   border-radius: 8px;
   text-align: center;
 }
@@ -768,11 +781,10 @@ html {
     margin-right: 10px;
   }
 
-  .search-input {
-    width: 120px;
-  }
-  .search-input:focus {
-    width: 160px;
+  /* Search Responsive */
+  .search-input.open {
+    width: 140px;
+    right: 35px;
   }
 }
 
