@@ -272,7 +272,7 @@ function App() {
       code: existingTicketCode,
       to_email: email,
       to_name: email,
-      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwell-films.vercel.app`,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwellmovies.com`,
     };
 
     emailjs
@@ -300,7 +300,7 @@ function App() {
       code: code,
       to_email: toEmail,
       to_name: toEmail,
-      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${code}\n\nWatch here: https://blackwell-films.vercel.app`,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${code}\n\nWatch here: https://blackwellmovies.com`,
     };
 
     emailjs
