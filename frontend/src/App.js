@@ -272,7 +272,7 @@ function App() {
       code: existingTicketCode,
       to_email: email,
       to_name: email,
-      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwell-films.onrender.com`,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwell-films.vercel.app`,
     };
 
     emailjs
@@ -300,7 +300,7 @@ function App() {
       code: code,
       to_email: toEmail,
       to_name: toEmail,
-      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${code}\n\nWatch here: https://blackwell-films.onrender.com`,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${code}\n\nWatch here: https://blackwell-films.vercel.app`,
     };
 
     emailjs
@@ -1037,8 +1037,6 @@ function App() {
       <footer className="app-footer">
         <div className="footer-grid">
           <div className="footer-brand">
-            {" "}
-            {/* Added class for precise alignment */}
             <img
               src="/logo13.png"
               alt="BLACKWELL"

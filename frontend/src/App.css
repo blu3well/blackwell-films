@@ -105,7 +105,7 @@ html {
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover !important;
+  object-fit: cover; /* Default for Desktop */
   object-position: center;
   transition: opacity 1.5s ease-in-out;
   backface-visibility: hidden;
@@ -128,13 +128,6 @@ html {
   height: 120px;
   width: auto;
   object-fit: contain;
-}
-
-/* --- FOOTER BRAND ALIGNMENT --- */
-.footer-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start; /* Default left align */
 }
 
 /* --- GLOSSY CARD EFFECT --- */
@@ -213,7 +206,7 @@ html {
   border-bottom: 2px solid var(--accent-color);
 }
 
-/* --- SEARCH (UPDATED FOR GOLD SVG) --- */
+/* --- SEARCH --- */
 .search-wrapper {
   position: relative;
   margin-right: 15px;
@@ -431,6 +424,219 @@ html {
   margin-left: 5px;
 }
 
+/* --- LAYOUTS --- */
+.centered-container-lg {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px;
+  position: relative;
+  z-index: 2;
+  margin-top: 40px;
+  width: 100%;
+}
+.centered-container {
+  max-width: 1000px;
+  margin: 80px auto;
+  padding: 0 20px;
+  width: 100%;
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.hero-actions {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 30px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.home-movie-info {
+  padding: 40px;
+  border-radius: 12px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 50px;
+}
+.detail-poster {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  height: 450px;
+}
+.detail-desc {
+  line-height: 1.8;
+  color: #ccc;
+  margin-bottom: 30px;
+}
+.detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid #333;
+  padding-top: 20px;
+}
+.meta-row {
+  display: flex;
+  align-items: baseline;
+}
+.meta-label {
+  font-weight: bold;
+  color: var(--accent-color);
+  min-width: 120px;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+.meta-value {
+  color: #e6e1dd;
+  font-size: 14px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+  border-radius: 4px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  font-weight: bold;
+}
+.badge-owned {
+  background-color: var(--success-color);
+  color: #fff;
+  border-color: var(--success-color);
+}
+
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 30px;
+}
+.movie-card {
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: var(--transition-main);
+  border: 1px solid var(--border-color);
+}
+.movie-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--accent-color);
+}
+.card-content {
+  padding: 15px;
+}
+
+/* --- RATING CARD HOME --- */
+.rating-card-home {
+  max-width: 500px;
+  margin: 30px auto;
+  padding: 25px;
+  border-radius: 8px;
+  text-align: center;
+}
+.rating-card-home h6 {
+  font-size: 14px;
+  color: var(--accent-color);
+  margin-bottom: 10px;
+}
+.thumb-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.auth-input-sm {
+  width: 100%;
+  background: #000;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* --- MODALS --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+}
+.theater-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  z-index: 3000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.auth-card {
+  background-color: var(--surface-color);
+  padding: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  width: 400px;
+  position: relative;
+}
+.auth-input {
+  width: 100%;
+  padding: 14px;
+  background-color: #000;
+  border: 1px solid #333;
+  color: white;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.auth-input:focus {
+  border-color: var(--accent-color);
+  outline: none;
+}
+
+.gatekeeper-tabs {
+  display: flex;
+  border-bottom: 1px solid #333;
+  margin-bottom: 25px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 12px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: bold;
+}
+.tab-btn.active {
+  color: var(--accent-color);
+  border-bottom: 2px solid var(--accent-color);
+}
+
 /* --- FOOTER --- */
 .app-footer {
   background-color: #0f0f0f;
@@ -471,6 +677,16 @@ html {
   color: var(--accent-color);
 }
 
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Default for Desktop */
+}
+/* SPECIFIC FIX: Nudge text right */
+.footer-brand p {
+  margin-left: 10px;
+}
+
 /* --- TOAST --- */
 .status-toast {
   position: fixed;
@@ -501,13 +717,8 @@ html {
     position: relative;
   }
 
-  .centered-container-lg,
-  .footer-grid,
-  .nav-bar {
-    width: 100%;
-    max-width: 100%;
-    padding-left: 15px;
-    padding-right: 15px;
+  .centered-container-lg {
+    padding: 0 15px; /* Restored padding */
   }
 
   .nav-bar {
@@ -529,6 +740,7 @@ html {
     grid-template-columns: 1fr;
     text-align: center;
     gap: 30px;
+    padding: 0 20px;
   }
 
   .footer-grid > div {
@@ -543,6 +755,9 @@ html {
   .footer-brand {
     align-items: center;
   }
+  .footer-brand p {
+    margin-left: 0; /* Reset nudge on mobile center */
+  }
 
   .auth-card {
     width: 95% !important;
@@ -550,17 +765,19 @@ html {
     padding: 25px 15px;
   }
 
-  /* Mobile Hero Fixes */
+  /* FIXED: Hero Slide on Mobile (No Crop) */
   .hero-wrapper {
-    height: 45vh; /* Reduced height to reduce letterboxing */
+    height: 50vh; /* Reduced height to reduce empty space */
   }
 
   .hero-slide {
-    object-fit: contain !important; /* Forces full image visibility */
+    object-fit: contain !important; /* Forces full image width visibility */
+    background-color: #000; /* Letterbox background */
   }
 
   .hero-title {
     font-size: 2rem;
+    margin-top: 10px;
   }
 
   .hero-content {
@@ -569,6 +786,13 @@ html {
     text-align: center;
     align-items: center;
   }
+
+  /* FIXED: Movie Info Card padding */
+  .home-movie-info {
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+
   .detail-grid {
     grid-template-columns: 1fr;
     gap: 30px;
