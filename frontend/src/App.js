@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
-import { QRCodeCanvas } from "qrcode.react";
+// QRCode removed
 import emailjs from "@emailjs/browser";
 import "./App.css";
 
@@ -99,9 +99,11 @@ function App() {
   const [legalView, setLegalView] = useState(null);
   const [showContact, setShowContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [existingTicketCode, setExistingTicketCode] = useState(null);
 
   const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState("");
+  const [ratingCounts, setRatingCounts] = useState({ up: 0, down: 0 });
 
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
@@ -112,10 +114,28 @@ function App() {
     setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
 
+  // --- FIXED: Use useCallback to stabilize the function reference ---
+  const fetchRatings = useCallback(
+    async (movieName) => {
+      try {
+        const res = await axios.get(
+          `${API_BASE}/ratings/${encodeURIComponent(movieName)}`
+        );
+        setRatingCounts(res.data);
+      } catch (err) {
+        console.error("Failed to fetch ratings", err);
+      }
+    },
+    [API_BASE]
+  );
+
+  // --- FIXED: fetchRatings added to dependency array ---
   useEffect(() => {
     const tickets = JSON.parse(localStorage.getItem("blackwell_tickets")) || {};
     setAccessCodes(tickets);
-  }, []);
+    // Fetch ratings on load
+    fetchRatings(MOVIE_DATA[0].name);
+  }, [fetchRatings]);
 
   const hasAccess = (movieName) => {
     return !!accessCodes[movieName];
@@ -128,6 +148,8 @@ function App() {
     } else {
       setShowGatekeeper(true);
       setGatekeeperMode("buy");
+      setExistingTicketCode(null);
+      setEmail("");
     }
   };
 
@@ -137,8 +159,30 @@ function App() {
     window.scrollTo(0, 0);
   };
 
-  const handlePaystack = () => {
+  const handlePreCheckPurchase = async () => {
     if (!email) return showFeedback("error", "Please enter your email.");
+    setIsProcessing(true);
+
+    try {
+      const res = await axios.post(`${API_BASE}/check-ticket-status`, {
+        email: email.trim(),
+        movieName: selectedMovie.name,
+      });
+
+      if (res.data.exists) {
+        setExistingTicketCode(res.data.code);
+        showFeedback("error", "This email already has an active ticket.");
+      } else {
+        handlePaystack();
+      }
+    } catch (err) {
+      showFeedback("error", "Connection error checking status.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaystack = () => {
     if (!window.PaystackPop)
       return showFeedback("error", "Payment system loading...");
 
@@ -166,33 +210,7 @@ function App() {
 
       if (res.data.success) {
         saveTicket(selectedMovie.name, res.data.code);
-
-        const SERVICE_ID = "service_9qvnylt";
-        const TEMPLATE_ID = "template_f43l5cc";
-        const PUBLIC_KEY = "RpZwEJtbEPw4skmFZ";
-
-        const emailParams = {
-          movie_name: selectedMovie.name,
-          code: res.data.code,
-          to_email: recipientEmail,
-          to_name: recipientEmail,
-          message: `THANK YOU FOR YOUR PURCHASE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${res.data.code}\n\nWatch here: https://blackwell-films.vercel.app`,
-        };
-
-        emailjs
-          .send(SERVICE_ID, TEMPLATE_ID, emailParams, PUBLIC_KEY)
-          .then(() => {
-            console.log("Email Sent via Frontend");
-            showFeedback("success", "Access Granted! Code sent to email.");
-          })
-          .catch((err) => {
-            console.error("Frontend Email Failed", err);
-            showFeedback(
-              "error",
-              "Email Failed: " + (err.text || "Check Recipient Address")
-            );
-          });
-
+        sendEmail(recipientEmail, res.data.code);
         setShowGatekeeper(false);
         setIsPlaying(true);
       } else {
@@ -204,6 +222,37 @@ function App() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleResendCode = () => {
+    if (!existingTicketCode || !email) return;
+    setIsProcessing(true);
+    sendEmail(email, existingTicketCode);
+    setIsProcessing(false);
+  };
+
+  const sendEmail = (toEmail, code) => {
+    const SERVICE_ID = "service_9qvnylt";
+    const TEMPLATE_ID = "template_f43l5cc";
+    const PUBLIC_KEY = "RpZwEJtbEPw4skmFZ";
+
+    const emailParams = {
+      movie_name: selectedMovie.name,
+      code: code,
+      to_email: toEmail,
+      to_name: toEmail,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${code}\n\nWatch here: https://blackwell-films.vercel.app`,
+    };
+
+    emailjs
+      .send(SERVICE_ID, TEMPLATE_ID, emailParams, PUBLIC_KEY)
+      .then(() => {
+        showFeedback("success", "Code sent to " + toEmail);
+      })
+      .catch((err) => {
+        console.error("Email Failed", err);
+        showFeedback("error", "Email Failed: " + (err.text || "Check Address"));
+      });
   };
 
   const verifyCode = async (e) => {
@@ -241,6 +290,8 @@ function App() {
       showFeedback("success", "Thanks for your feedback!");
       setUserRating(null);
       setUserComment("");
+      // Refresh counts
+      fetchRatings(selectedMovie.name);
     } catch (err) {
       showFeedback("error", "Could not save rating.");
     } finally {
@@ -257,10 +308,6 @@ function App() {
   const filteredResults = movies.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const qrValue = selectedMovie?.id
-    ? `https://blackwellfilms.com/pay?movie=${selectedMovie.id}`
-    : "";
 
   return (
     <div className="app-container">
@@ -428,6 +475,88 @@ function App() {
                     >
                       IMDb
                     </a>
+                  </div>
+
+                  {/* --- HOME RATING CARD --- */}
+                  <div
+                    className="centered-container-lg"
+                    style={{
+                      maxWidth: "600px",
+                      marginTop: "0",
+                      marginBottom: "40px",
+                    }}
+                  >
+                    <div
+                      className="rating-section"
+                      style={{
+                        padding: "15px",
+                        background: "rgba(255,255,255,0.05)",
+                        borderRadius: "8px",
+                        border: "1px solid #333",
+                      }}
+                    >
+                      <h5
+                        style={{
+                          marginTop: 0,
+                          marginBottom: "10px",
+                          color: "var(--accent-color)",
+                          textAlign: "center",
+                        }}
+                      >
+                        SEEN THIS MOVIE? RATE IT
+                      </h5>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "25px",
+                          marginBottom: "15px",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <button
+                          onClick={() => setUserRating("up")}
+                          className={`rating-btn ${
+                            userRating === "up" ? "active" : ""
+                          }`}
+                        >
+                          👍{" "}
+                          <span className="rating-count">
+                            {ratingCounts.up}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => setUserRating("down")}
+                          className={`rating-btn ${
+                            userRating === "down" ? "active" : ""
+                          }`}
+                        >
+                          👎{" "}
+                          <span className="rating-count">
+                            {ratingCounts.down}
+                          </span>
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="One line comment..."
+                        className="auth-input"
+                        value={userComment}
+                        onChange={(e) => setUserComment(e.target.value)}
+                        style={{
+                          width: "100%",
+                          marginBottom: "10px",
+                          fontSize: "12px",
+                          padding: "10px",
+                        }}
+                      />
+                      <button
+                        onClick={submitRating}
+                        disabled={isProcessing}
+                        className="btn btn-primary btn-sm"
+                      >
+                        SUBMIT
+                      </button>
+                    </div>
                   </div>
 
                   <div className="home-movie-info">
@@ -754,7 +883,10 @@ function App() {
                             userRating === "up" ? "active" : ""
                           }`}
                         >
-                          👍
+                          👍{" "}
+                          <span className="rating-count">
+                            {ratingCounts.up}
+                          </span>
                         </button>
                         <button
                           onClick={() => setUserRating("down")}
@@ -762,7 +894,10 @@ function App() {
                             userRating === "down" ? "active" : ""
                           }`}
                         >
-                          👎
+                          👎{" "}
+                          <span className="rating-count">
+                            {ratingCounts.down}
+                          </span>
                         </button>
                       </div>
                       <input
@@ -914,12 +1049,6 @@ function App() {
               >
                 HAVE A CODE?
               </button>
-              <button
-                className={`tab-btn ${gatekeeperMode === "qr" ? "active" : ""}`}
-                onClick={() => setGatekeeperMode("qr")}
-              >
-                SCAN QR
-              </button>
             </div>
 
             <div className="gatekeeper-content">
@@ -938,15 +1067,45 @@ function App() {
                     onChange={(e) => setEmail(e.target.value)}
                     style={{ marginBottom: "15px", textAlign: "center" }}
                   />
-                  <button
-                    onClick={handlePaystack}
-                    disabled={isProcessing}
-                    className="btn btn-primary"
-                  >
-                    {isProcessing
-                      ? "PROCESSING..."
-                      : `PAY KES ${selectedMovie?.price}`}
-                  </button>
+
+                  {/* EXISTING TICKET WARNING LOGIC */}
+                  {existingTicketCode ? (
+                    <div
+                      style={{
+                        background: "rgba(231, 76, 60, 0.2)",
+                        padding: "15px",
+                        borderRadius: "8px",
+                        border: "1px solid #e74c3c",
+                      }}
+                    >
+                      <p
+                        style={{
+                          color: "#fff",
+                          fontSize: "14px",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        ⚠ You already have an active ticket for this email.
+                      </p>
+                      <button
+                        onClick={handleResendCode}
+                        disabled={isProcessing}
+                        className="btn btn-warning"
+                      >
+                        {isProcessing ? "SENDING..." : "RESEND CODE TO EMAIL"}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handlePreCheckPurchase}
+                      disabled={isProcessing}
+                      className="btn btn-primary"
+                    >
+                      {isProcessing
+                        ? "PROCESSING..."
+                        : `PAY KES ${selectedMovie?.price}`}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -976,37 +1135,6 @@ function App() {
                     {isProcessing ? "VERIFYING..." : "WATCH MOVIE"}
                   </button>
                 </form>
-              )}
-
-              {gatekeeperMode === "qr" && (
-                <div style={{ textAlign: "center", padding: "20px" }}>
-                  <p style={{ color: "#ccc", marginBottom: "20px" }}>
-                    Scan to buy or check access on mobile.
-                  </p>
-                  <div
-                    style={{
-                      background: "white",
-                      padding: "10px",
-                      display: "inline-block",
-                      borderRadius: "8px",
-                    }}
-                  >
-                    {qrValue ? (
-                      <QRCodeCanvas value={qrValue} size={150} />
-                    ) : (
-                      <p style={{ color: "#333" }}>Loading QR...</p>
-                    )}
-                  </div>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      color: "#888",
-                      marginTop: "10px",
-                    }}
-                  >
-                    Use your camera
-                  </p>
-                </div>
               )}
             </div>
           </div>

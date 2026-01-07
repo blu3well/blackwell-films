@@ -5,8 +5,11 @@
   /* PITCH BLACK BACKGROUND */
   --bg-color: #000000;
   --surface-color: #1a1816;
-  --accent-color: #d4a373;
-  --logo-color: #ffcc80;
+
+  /* UPDATED: High Saturation Gold for "Pop" */
+  --accent-color: #ffc107;
+  --logo-color: #ffca28;
+
   --text-color: #e6e1dd;
   --text-muted: #888;
   --text-dark: #2b2118;
@@ -25,43 +28,46 @@ html {
   font-family: "Montserrat", sans-serif;
   color: var(--text-color);
   -webkit-font-smoothing: antialiased;
+
+  /* FIX: Mobile Overflow issues */
   overflow-x: hidden;
-  scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
 }
 
 * {
   box-sizing: border-box;
 }
+
 .app-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
 }
 
-/* FIX: Added padding to ensure content never touches the footer */
 .main-content {
   padding-bottom: 50px;
 }
 
-/* --- HERO SECTION (REVERTED TO ORIGINAL FEEL) --- */
+/* --- HERO SECTION --- */
 .hero-wrapper {
   position: relative;
   width: 100%;
-  height: 85vh; /* Reverted to full cinematic height */
+  height: 85vh;
   overflow: hidden;
   margin-bottom: 0;
 }
 
-/* Restored: Full cover, Centered, and Interactivity Hook */
 .hero-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center; /* Standard center alignment */
-  transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smooth Zoom */
+  object-position: center;
+  transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Restored: The Zoom Effect */
 .hero-wrapper:hover .hero-image {
   transform: scale(1.05);
 }
@@ -108,6 +114,7 @@ html {
   z-index: 100;
   height: var(--nav-height);
   transition: var(--transition-main);
+  width: 100%;
 }
 .nav-left,
 .nav-right {
@@ -224,6 +231,10 @@ html {
   color: #000;
   font-weight: 800;
 }
+.btn-warning {
+  background-color: #e67e22;
+  color: white;
+}
 
 /* --- RATING BUTTONS --- */
 .rating-btn {
@@ -236,13 +247,22 @@ html {
   height: 50px;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .rating-btn:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 .rating-btn.active {
   border-color: var(--accent-color);
-  background: rgba(212, 163, 115, 0.2);
+  background: rgba(255, 193, 7, 0.2);
+}
+.rating-count {
+  font-size: 12px;
+  margin-left: 8px;
+  color: #888;
+  font-weight: bold;
 }
 
 .btn-close-theater {
@@ -271,13 +291,13 @@ html {
 /* --- PLAY BUTTON --- */
 @keyframes pulse-glow {
   0% {
-    box-shadow: 0 0 0 0 rgba(212, 163, 115, 0.5);
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.5);
   }
   70% {
-    box-shadow: 0 0 0 20px rgba(212, 163, 115, 0);
+    box-shadow: 0 0 0 20px rgba(255, 193, 7, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(212, 163, 115, 0);
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
   }
 }
 
@@ -288,7 +308,7 @@ html {
   transform: translate(-50%, -50%);
   width: 80px;
   height: 80px;
-  background-color: rgba(212, 163, 115, 0.9);
+  background-color: rgba(255, 193, 7, 0.9);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -315,13 +335,14 @@ html {
   padding: 0 20px;
   position: relative;
   z-index: 2;
-  /* Standard Margin: Puts title below image, no overlap, no scrolling tricks */
   margin-top: 40px;
+  width: 100%;
 }
 .centered-container {
   max-width: 1000px;
   margin: 80px auto;
   padding: 0 20px;
+  width: 100%;
 }
 
 .hero-content {
@@ -334,7 +355,7 @@ html {
 .hero-actions {
   display: flex;
   gap: 15px;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
   justify-content: center;
   flex-wrap: wrap;
 }
@@ -492,12 +513,12 @@ html {
   border-bottom: 2px solid var(--accent-color);
 }
 
-/* REDUCED FOOTER SIZE: Padding changed from 60px to 30px */
 .app-footer {
   background-color: #0f0f0f;
   border-top: 1px solid #222;
   padding: 30px 0;
   margin-top: auto;
+  width: 100%;
 }
 .footer-grid {
   max-width: 1000px;
@@ -506,6 +527,7 @@ html {
   grid-template-columns: repeat(3, 1fr);
   gap: 40px;
   padding: 0 20px;
+  width: 100%;
 }
 .footer-head {
   color: #fff;
@@ -550,46 +572,97 @@ html {
   background-color: var(--error-color);
 }
 
-/* --- RESPONSIVE --- */
+/* --- RESPONSIVE FIXES (UPDATED) --- */
 @media (max-width: 768px) {
+  /* Prevent horizontal scroll stretching */
+  body,
+  html,
+  .app-container {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+
+  /* Reset container width for mobile */
+  .centered-container-lg,
+  .footer-grid,
   .nav-bar {
-    padding: 0 15px;
+    width: 100%;
+    max-width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .nav-bar {
+    padding: 0 10px;
   }
   .nav-logo {
-    font-size: 18px;
-    margin-right: 15px;
+    font-size: 16px;
+    margin-right: 10px;
   }
   .nav-links {
-    gap: 12px;
+    gap: 10px;
   }
   .nav-link {
-    font-size: 11px;
+    font-size: 10px;
   }
+
+  /* Stack footer vertically */
+  .footer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 30px;
+  }
+
   .auth-card {
-    width: 90% !important;
+    width: 95% !important;
     max-width: 380px;
-    padding: 30px 20px;
+    padding: 25px 15px;
   }
+
+  .hero-wrapper {
+    /* Allow height to adjust on mobile but keep cover */
+    height: 70vh;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
   .hero-content {
     flex-direction: column;
     gap: 10px;
     text-align: center;
     align-items: center;
   }
-  .hero-image {
-    max-height: 50vh;
-  }
   .detail-grid {
     grid-template-columns: 1fr;
     gap: 30px;
     text-align: center;
   }
+
+  /* Fix poster width on mobile */
+  .detail-poster {
+    height: auto;
+    max-height: 400px;
+    width: 80%;
+    margin: 0 auto;
+  }
+
   .meta-row {
     justify-content: center;
   }
   .meta-label {
     min-width: auto;
     margin-right: 10px;
+  }
+
+  /* Search input smaller on mobile */
+  .search-input {
+    width: 120px;
+  }
+  .search-input:focus {
+    width: 160px;
   }
 }
 
