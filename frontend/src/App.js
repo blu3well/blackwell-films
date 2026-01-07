@@ -119,7 +119,15 @@ function App() {
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
+  // --- SPLASH SCREEN & PRELOADER ---
   useEffect(() => {
+    // 1. Preload Hero Images to fix "stretch" glitch on load
+    HERO_IMAGES.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+
+    // 2. Timer
     const timer = setTimeout(() => {
       setLoading(false);
     }, 3000);
@@ -131,6 +139,7 @@ function App() {
     setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
 
+  // Slideshow
   useEffect(() => {
     if (!loading && view === "home") {
       const interval = setInterval(() => {
@@ -432,7 +441,6 @@ function App() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            {/* UPDATED: Gold SVG Search Icon */}
             <button
               className="search-icon-btn"
               onClick={() => setSearchOpen(!searchOpen)}
@@ -494,7 +502,6 @@ function App() {
                   >
                     <span className="play-icon">▶</span>
                   </div>
-                  {/* FLUID SLIDESHOW */}
                   {HERO_IMAGES.map((imgSrc, index) => (
                     <img
                       key={index}
@@ -612,6 +619,14 @@ function App() {
                               {MOVIE_DATA[0].year}
                             </span>
                           </div>
+                          {/* GENRE FIRST */}
+                          <div className="meta-row">
+                            <span className="meta-label">GENRE:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].genre}
+                            </span>
+                          </div>
+                          {/* DIRECTOR SECOND */}
                           <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>
                             <span className="meta-value">
@@ -623,12 +638,6 @@ function App() {
                               >
                                 {MOVIE_DATA[0].director.name}
                               </a>
-                            </span>
-                          </div>
-                          <div className="meta-row">
-                            <span className="meta-label">GENRE:</span>
-                            <span className="meta-value">
-                              {MOVIE_DATA[0].genre}
                             </span>
                           </div>
                           <div className="meta-row">
@@ -855,6 +864,14 @@ function App() {
                         <span className="meta-label">YEAR:</span>
                         <span className="meta-value">{selectedMovie.year}</span>
                       </div>
+                      {/* GENRE FIRST */}
+                      <div className="meta-row">
+                        <span className="meta-label">GENRE:</span>
+                        <span className="meta-value">
+                          {selectedMovie.genre}
+                        </span>
+                      </div>
+                      {/* DIRECTOR SECOND */}
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
                         <span className="meta-value">
@@ -866,12 +883,6 @@ function App() {
                           >
                             {selectedMovie.director.name}
                           </a>
-                        </span>
-                      </div>
-                      <div className="meta-row">
-                        <span className="meta-label">GENRE:</span>
-                        <span className="meta-value">
-                          {selectedMovie.genre}
                         </span>
                       </div>
                       <div className="meta-row">
