@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
-// QRCode removed
 import emailjs from "@emailjs/browser";
 import "./App.css";
 
-// --- DATA ---
 const MOVIE_DATA = [
   {
     id: "cards-on-the-table",
@@ -39,7 +37,6 @@ const MOVIE_DATA = [
     movieFile:
       "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
     image: "/COTTposter1.jpg",
-    // landscapeImage removed in favor of slideshow array
     imdbLink: "https://www.imdb.com/title/tt38939205/",
     isFeatured: true,
     type: "movie",
@@ -90,6 +87,7 @@ function ProgressiveImage({ src, alt, className, style, onClick }) {
 }
 
 function App() {
+  const [loading, setLoading] = useState(true); // Splash screen state
   const [view, setView] = useState("home");
   const [accessCodes, setAccessCodes] = useState(
     () => JSON.parse(localStorage.getItem("blackwell_tickets")) || {}
@@ -108,10 +106,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [existingTicketCode, setExistingTicketCode] = useState(null);
 
-  // Slideshow State
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
-
-  // Ratings State
   const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState("");
   const [ratingCounts, setRatingCounts] = useState({ up: 0, down: 0 });
@@ -120,17 +115,26 @@ function App() {
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
+  // --- SPLASH SCREEN TIMER ---
+  useEffect(() => {
+    // Show splash for 3 seconds then load app
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const showFeedback = (type, msg) => {
     setStatus({ type, message: msg });
     setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
 
-  // --- Slideshow Effect ---
+  // Slideshow
   useEffect(() => {
     if (view === "home") {
       const interval = setInterval(() => {
         setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
-      }, 5000); // Change slide every 5 seconds
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [view]);
@@ -245,7 +249,7 @@ function App() {
   const handleResendCode = () => {
     if (!existingTicketCode || !email) return;
     setIsProcessing(true);
-    // Send email then switch tab
+
     const SERVICE_ID = "service_9qvnylt";
     const TEMPLATE_ID = "template_f43l5cc";
     const PUBLIC_KEY = "RpZwEJtbEPw4skmFZ";
@@ -262,7 +266,7 @@ function App() {
       .send(SERVICE_ID, TEMPLATE_ID, emailParams, PUBLIC_KEY)
       .then(() => {
         showFeedback("success", "Code sent to " + email);
-        setGatekeeperMode("code"); // Auto-switch to enter code tab
+        setGatekeeperMode("code");
       })
       .catch((err) => {
         console.error("Email Failed", err);
@@ -273,7 +277,6 @@ function App() {
       });
   };
 
-  // Generic Email Send (used by purchase)
   const sendEmail = (toEmail, code) => {
     const SERVICE_ID = "service_9qvnylt";
     const TEMPLATE_ID = "template_f43l5cc";
@@ -320,15 +323,13 @@ function App() {
     }
   };
 
-  // --- IMMEDIATE RATING LOGIC ---
   const handleThumbClick = async (type) => {
     setUserRating(type);
-    // Optimistic UI update or wait for fetch? Let's just fire and fetch.
     try {
       await axios.post(`${API_BASE}/rate-movie`, {
         movieName: selectedMovie.name,
         rating: type,
-        comment: "", // Just the vote
+        comment: "",
       });
       fetchRatings(selectedMovie.name);
     } catch (err) {
@@ -336,12 +337,10 @@ function App() {
     }
   };
 
-  // --- COMMENT ONLY SUBMIT ---
   const handleSubmitComment = async () => {
     if (!userComment) return;
     setIsProcessing(true);
     try {
-      // Send comment with 'none' rating so it doesn't double count votes in DB stats
       await axios.post(`${API_BASE}/rate-movie`, {
         movieName: selectedMovie.name,
         rating: "none",
@@ -366,6 +365,16 @@ function App() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // --- SPLASH SCREEN RENDER ---
+  if (loading) {
+    return (
+      <div className="splash-screen">
+        <img src="/logo13.png" alt="Loading..." className="splash-logo" />
+      </div>
+    );
+  }
+
+  // --- MAIN APP RENDER ---
   return (
     <div className="app-container">
       {status.message && (
@@ -381,7 +390,6 @@ function App() {
       {/* --- NAV --- */}
       <nav className="nav-bar">
         <div className="nav-left">
-          {/* HEADER LOGO IMAGE */}
           <img
             src="/logo12.png"
             alt="BLACKWELL"
@@ -485,7 +493,6 @@ function App() {
                     <div>
                       <h2 className="hero-title">{MOVIE_DATA[0].name}</h2>
                     </div>
-                    {/* CHANGED TEXT: You Have Access */}
                     <span
                       className={`badge ${
                         hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
@@ -544,7 +551,8 @@ function App() {
                     </a>
                   </div>
 
-                  <div className="home-movie-info">
+                  {/* ADDED GLOSSY OUTLINE CLASS */}
+                  <div className="home-movie-info glossy-card">
                     <div className="detail-grid">
                       <div className="detail-poster">
                         <ProgressiveImage
@@ -631,24 +639,16 @@ function App() {
                     </div>
                   </div>
 
-                  {/* --- SMALLER RATING CARD BELOW INFO --- */}
+                  {/* RATING CARD: Moved down and Glossy */}
                   <div
                     className="centered-container-lg"
                     style={{
                       maxWidth: "500px",
-                      marginTop: "30px",
+                      marginTop: "80px",
                       marginBottom: "40px",
                     }}
                   >
-                    <div
-                      className="rating-section"
-                      style={{
-                        padding: "15px",
-                        background: "rgba(255,255,255,0.05)",
-                        borderRadius: "8px",
-                        border: "1px solid #333",
-                      }}
-                    >
+                    <div className="rating-card-home glossy-card">
                       <h6
                         style={{
                           marginTop: 0,
@@ -711,7 +711,7 @@ function App() {
                         className="btn btn-primary btn-sm"
                         style={{ width: "100%" }}
                       >
-                        SUBMIT COMMENT
+                        SUBMIT
                       </button>
                     </div>
                   </div>
@@ -721,7 +721,6 @@ function App() {
 
             {view === "movies" && (
               <div className="centered-container-lg">
-                {/* TITLE IN GOLD */}
                 <h1
                   style={{
                     textAlign: "center",
@@ -777,7 +776,7 @@ function App() {
               >
                 <button
                   onClick={() => setView("movies")}
-                  className="btn-ghost"
+                  className="btn-back"
                   style={{
                     width: "auto",
                     padding: "10px 20px",
@@ -929,11 +928,10 @@ function App() {
                     </div>
 
                     <div
-                      className="rating-section"
+                      className="rating-section glossy-card"
                       style={{
                         marginTop: "30px",
                         padding: "20px",
-                        background: "rgba(255,255,255,0.05)",
                         borderRadius: "8px",
                       }}
                     >
@@ -986,7 +984,7 @@ function App() {
                         className="btn btn-primary btn-sm"
                         style={{ width: "auto" }}
                       >
-                        SUBMIT COMMENT
+                        SUBMIT
                       </button>
                     </div>
                   </div>
@@ -1019,7 +1017,6 @@ function App() {
       <footer className="app-footer">
         <div className="footer-grid">
           <div>
-            {/* FOOTER LOGO IMAGE */}
             <img
               src="/logo13.png"
               alt="BLACKWELL"
@@ -1029,7 +1026,9 @@ function App() {
               © 2025 Blackwell Films.
             </p>
           </div>
-          <div>
+          <div style={{ textAlign: "center" }}>
+            {" "}
+            {/* Centered Socials */}
             <h5 className="footer-head">Socials</h5>
             <a
               href="https://www.tiktok.com/@blackwellfilms?lang=en"
@@ -1056,23 +1055,28 @@ function App() {
               Facebook
             </a>
           </div>
-          <div>
+          <div style={{ textAlign: "right" }}>
+            {" "}
+            {/* Right Aligned Support */}
             <h5 className="footer-head">Support</h5>
             <button
               className="footer-link"
               onClick={() => setLegalView("terms")}
+              style={{ marginLeft: "auto" }}
             >
               Terms of Service
             </button>
             <button
               className="footer-link"
               onClick={() => setLegalView("privacy")}
+              style={{ marginLeft: "auto" }}
             >
               Privacy Policy
             </button>
             <button
               className="footer-link"
               onClick={() => setShowContact(true)}
+              style={{ marginLeft: "auto" }}
             >
               Contact Us
             </button>
@@ -1082,10 +1086,7 @@ function App() {
 
       {showGatekeeper && (
         <div className="modal-overlay">
-          <div
-            className="auth-card"
-            style={{ width: "600px", maxWidth: "95%" }}
-          >
+          <div className="auth-card">
             <button
               onClick={() => setShowGatekeeper(false)}
               className="btn-close-modal"

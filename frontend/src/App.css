@@ -17,7 +17,6 @@
   --error-color: #e74c3c;
   --border-color: #2b2824;
 
-  /* UPDATED: Height increased to fit bigger logo */
   --nav-height: 100px;
 
   --transition-main: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -52,6 +51,44 @@ html {
   padding-bottom: 50px;
 }
 
+/* --- SPLASH SCREEN --- */
+.splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeOut 0.5s 2.5s forwards; /* Fades out after 2.5s */
+}
+
+.splash-logo {
+  width: 200px;
+  animation: fadeInZoom 2s ease-out forwards;
+}
+
+@keyframes fadeInZoom {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
 /* --- HERO SECTION --- */
 .hero-wrapper {
   position: relative;
@@ -62,7 +99,6 @@ html {
   background-color: #000;
 }
 
-/* FLUID SLIDESHOW IMAGES */
 .hero-slide {
   position: absolute;
   top: 0;
@@ -74,9 +110,9 @@ html {
   transition: opacity 1.5s ease-in-out;
 }
 
-/* --- LOGO IMAGES (UPDATED SIZES) --- */
+/* --- LOGOS --- */
 .nav-logo-img {
-  height: 80px; /* Increased from 50px */
+  height: 80px;
   width: auto;
   object-fit: contain;
   cursor: pointer;
@@ -87,9 +123,16 @@ html {
 }
 
 .footer-logo-img {
-  height: 120px; /* Increased from 60px */
+  height: 120px;
   width: auto;
   object-fit: contain;
+}
+
+/* --- GLOSSY CARD EFFECT (NEW) --- */
+.glossy-card {
+  border: 1px solid var(--accent-color);
+  box-shadow: 0 0 15px rgba(255, 193, 7, 0.15);
+  background-color: rgba(26, 24, 22, 0.95); /* Slight opacity */
 }
 
 /* --- TYPOGRAPHY CLASSES --- */
@@ -242,15 +285,29 @@ html {
   color: white;
 }
 
-/* --- RATING BUTTONS --- */
+/* New Back Button Style (Gold) */
+.btn-back {
+  background-color: transparent;
+  color: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-family: "Montserrat", sans-serif;
+  transition: all 0.3s;
+}
+.btn-back:hover {
+  background-color: var(--accent-color);
+  color: #000;
+}
+
+/* --- RATING BUTTONS (Updated) --- */
 .rating-btn {
   background: transparent;
-  border: 1px solid #555;
+  border: none; /* Removed circle */
   color: #888;
-  font-size: 24px;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  font-size: 28px; /* Slightly larger */
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -258,13 +315,26 @@ html {
   justify-content: center;
 }
 .rating-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-.rating-btn.active {
-  border-color: var(--accent-color);
-  background: rgba(255, 193, 7, 0.2);
+  color: #fff;
   transform: scale(1.1);
 }
+.rating-btn.active {
+  color: var(--accent-color);
+  animation: pop 0.4s ease;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .rating-count {
   font-size: 12px;
   margin-left: 8px;
@@ -368,11 +438,9 @@ html {
 }
 
 .home-movie-info {
-  background-color: var(--surface-color);
   padding: 40px;
   border-radius: 12px;
-  border: 1px solid var(--border-color);
-}
+} /* Border handled by glossy-card */
 .detail-grid {
   display: grid;
   grid-template-columns: 300px 1fr;
@@ -452,10 +520,8 @@ html {
 .rating-card-home {
   max-width: 500px;
   margin: 30px auto;
-  padding: 15px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 25px; /* Spacing handled inline for top margin */
   border-radius: 8px;
-  border: 1px solid #333;
   text-align: center;
 }
 .rating-card-home h6 {
@@ -474,16 +540,10 @@ html {
   background: #000;
   border: 1px solid #333;
   color: #fff;
-  padding: 8px;
-  margin-bottom: 10px;
+  padding: 10px;
+  margin-bottom: 15px;
   border-radius: 4px;
   font-size: 12px;
-}
-
-/* --- MOVIES PAGE TITLE --- */
-.movies-title {
-  color: var(--accent-color);
-  font-family: "Playfair Display", serif;
 }
 
 /* --- MODALS --- */
@@ -558,6 +618,7 @@ html {
   border-bottom: 2px solid var(--accent-color);
 }
 
+/* --- FOOTER (Updated Alignment) --- */
 .app-footer {
   background-color: #0f0f0f;
   border-top: 1px solid #222;
@@ -639,7 +700,6 @@ html {
   .nav-bar {
     padding: 0 10px;
   }
-  /* Updated mobile logo size */
   .nav-logo-img {
     height: 50px;
     margin-right: 10px;
@@ -656,6 +716,15 @@ html {
     grid-template-columns: 1fr;
     text-align: center;
     gap: 30px;
+  }
+
+  /* Reset alignment on mobile */
+  .footer-grid > div {
+    text-align: center !important;
+  }
+  .footer-link {
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .auth-card {
