@@ -89,7 +89,7 @@ function ProgressiveImage({ src, alt, className, style, onClick }) {
 function App() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("home");
-  const [previousView, setPreviousView] = useState("home"); // Track history
+  const [previousView, setPreviousView] = useState("home");
   const [accessCodes, setAccessCodes] = useState(
     () => JSON.parse(localStorage.getItem("blackwell_tickets")) || {}
   );
@@ -105,7 +105,6 @@ function App() {
   const [legalView, setLegalView] = useState(null);
   const [showContact, setShowContact] = useState(false);
 
-  // Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -120,7 +119,6 @@ function App() {
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
-  // --- SPLASH SCREEN TIMER ---
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -133,7 +131,6 @@ function App() {
     setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
 
-  // Slideshow - Starts ONLY after loading to prevent glitch
   useEffect(() => {
     if (!loading && view === "home") {
       const interval = setInterval(() => {
@@ -180,7 +177,7 @@ function App() {
   };
 
   const handleViewInfo = (movie) => {
-    setPreviousView(view); // Save where we came from
+    setPreviousView(view);
     setSelectedMovie(movie);
     setView("movie-details");
     window.scrollTo(0, 0);
@@ -258,7 +255,7 @@ function App() {
   const handleResendCode = () => {
     if (!existingTicketCode || !email) return;
     setIsProcessing(true);
-    // Send email then switch tab
+
     const SERVICE_ID = "service_9qvnylt";
     const TEMPLATE_ID = "template_f43l5cc";
     const PUBLIC_KEY = "RpZwEJtbEPw4skmFZ";
@@ -374,7 +371,6 @@ function App() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // --- SPLASH SCREEN RENDER ---
   if (loading) {
     return (
       <div className="splash-screen">
@@ -383,7 +379,6 @@ function App() {
     );
   }
 
-  // --- MAIN APP RENDER ---
   return (
     <div className="app-container">
       {status.message && (
@@ -429,7 +424,6 @@ function App() {
           </div>
         </div>
         <div className="nav-right">
-          {/* SEARCH ICON TOGGLE */}
           <div className="search-wrapper">
             <input
               type="text"
@@ -438,11 +432,24 @@ function App() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {/* UPDATED: Gold SVG Search Icon */}
             <button
               className="search-icon-btn"
               onClick={() => setSearchOpen(!searchOpen)}
             >
-              🔍
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
             </button>
           </div>
         </div>
@@ -605,7 +612,6 @@ function App() {
                               {MOVIE_DATA[0].year}
                             </span>
                           </div>
-                          {/* DIRECTOR MOVED ABOVE GENRE */}
                           <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>
                             <span className="meta-value">
@@ -650,7 +656,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* RATING CARD */}
                   <div
                     className="centered-container-lg"
                     style={{
@@ -779,7 +784,6 @@ function App() {
               </div>
             )}
 
-            {/* --- MOVIE INFO PAGE --- */}
             {view === "movie-details" && selectedMovie && (
               <div
                 className="centered-container-lg"
@@ -851,7 +855,6 @@ function App() {
                         <span className="meta-label">YEAR:</span>
                         <span className="meta-value">{selectedMovie.year}</span>
                       </div>
-                      {/* DIRECTOR MOVED ABOVE GENRE */}
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
                         <span className="meta-value">
