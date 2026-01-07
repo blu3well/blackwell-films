@@ -6,7 +6,7 @@
   --bg-color: #000000;
   --surface-color: #1a1816;
 
-  /* UPDATED: High Saturation Gold */
+  /* High Saturation Gold */
   --accent-color: #ffc107;
   --logo-color: #ffca28;
 
@@ -16,7 +16,10 @@
   --success-color: #2ecc71;
   --error-color: #e74c3c;
   --border-color: #2b2824;
-  --nav-height: 80px;
+
+  /* UPDATED: Height increased to fit bigger logo */
+  --nav-height: 100px;
+
   --transition-main: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -71,9 +74,9 @@ html {
   transition: opacity 1.5s ease-in-out;
 }
 
-/* --- LOGO IMAGES --- */
+/* --- LOGO IMAGES (UPDATED SIZES) --- */
 .nav-logo-img {
-  height: 50px;
+  height: 80px; /* Increased from 50px */
   width: auto;
   object-fit: contain;
   cursor: pointer;
@@ -84,7 +87,7 @@ html {
 }
 
 .footer-logo-img {
-  height: 60px;
+  height: 120px; /* Increased from 60px */
   width: auto;
   object-fit: contain;
 }
@@ -138,7 +141,6 @@ html {
   display: flex;
   align-items: center;
 }
-/* .nav-logo text removed in favor of image */
 .nav-links {
   display: flex;
   gap: 20px;
@@ -446,6 +448,44 @@ html {
   padding: 15px;
 }
 
+/* --- RATING CARD HOME --- */
+.rating-card-home {
+  max-width: 500px;
+  margin: 30px auto;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid #333;
+  text-align: center;
+}
+.rating-card-home h6 {
+  font-size: 14px;
+  color: var(--accent-color);
+  margin-bottom: 10px;
+}
+.thumb-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.auth-input-sm {
+  width: 100%;
+  background: #000;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* --- MOVIES PAGE TITLE --- */
+.movies-title {
+  color: var(--accent-color);
+  font-family: "Playfair Display", serif;
+}
+
 /* --- MODALS --- */
 .modal-overlay {
   position: fixed;
@@ -599,10 +639,11 @@ html {
   .nav-bar {
     padding: 0 10px;
   }
+  /* Updated mobile logo size */
   .nav-logo-img {
-    height: 40px;
+    height: 50px;
     margin-right: 10px;
-  } /* Smaller logo on mobile */
+  }
   .nav-links {
     gap: 10px;
     margin-left: 10px;
