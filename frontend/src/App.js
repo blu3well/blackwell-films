@@ -121,13 +121,11 @@ function App() {
 
   // --- SPLASH SCREEN & PRELOADER ---
   useEffect(() => {
-    // 1. Preload Hero Images to fix "stretch" glitch on load
     HERO_IMAGES.forEach((src) => {
       const img = new Image();
       img.src = src;
     });
 
-    // 2. Timer
     const timer = setTimeout(() => {
       setLoading(false);
     }, 3000);
@@ -224,7 +222,7 @@ function App() {
       return showFeedback("error", "Payment system loading...");
 
     const handler = window.PaystackPop.setup({
-      key: "pk_test_8196b2b3d7ad464e3e647c4d23a1e092a40b8da8",
+      key: "pk_live_36e3a37b7428b85df3f32582e043ffb49e0e1ed3",
       email: email,
       amount: selectedMovie.price * 100,
       currency: "KES",
@@ -274,7 +272,7 @@ function App() {
       code: existingTicketCode,
       to_email: email,
       to_name: email,
-      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwell-films.vercel.app`,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwell-films.onrender.com`,
     };
 
     emailjs
@@ -619,14 +617,12 @@ function App() {
                               {MOVIE_DATA[0].year}
                             </span>
                           </div>
-                          {/* GENRE FIRST */}
                           <div className="meta-row">
                             <span className="meta-label">GENRE:</span>
                             <span className="meta-value">
                               {MOVIE_DATA[0].genre}
                             </span>
                           </div>
-                          {/* DIRECTOR SECOND */}
                           <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>
                             <span className="meta-value">
@@ -864,14 +860,12 @@ function App() {
                         <span className="meta-label">YEAR:</span>
                         <span className="meta-value">{selectedMovie.year}</span>
                       </div>
-                      {/* GENRE FIRST */}
                       <div className="meta-row">
                         <span className="meta-label">GENRE:</span>
                         <span className="meta-value">
                           {selectedMovie.genre}
                         </span>
                       </div>
-                      {/* DIRECTOR SECOND */}
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
                         <span className="meta-value">
@@ -1042,7 +1036,9 @@ function App() {
 
       <footer className="app-footer">
         <div className="footer-grid">
-          <div>
+          <div className="footer-brand">
+            {" "}
+            {/* Added class for precise alignment */}
             <img
               src="/logo13.png"
               alt="BLACKWELL"
