@@ -39,11 +39,18 @@ const MOVIE_DATA = [
     movieFile:
       "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
     image: "/COTTposter1.jpg",
-    landscapeImage: "/beth&jackso.jpg",
+    // landscapeImage removed in favor of slideshow array
     imdbLink: "https://www.imdb.com/title/tt38939205/",
     isFeatured: true,
     type: "movie",
   },
+];
+
+const HERO_IMAGES = [
+  "/beth&jackso.jpg",
+  "/kip.jpg",
+  "/ndocha.jpg",
+  "/beth.jpg",
 ];
 
 const LEGAL_TEXT = {
@@ -101,6 +108,10 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [existingTicketCode, setExistingTicketCode] = useState(null);
 
+  // Slideshow State
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+
+  // Ratings State
   const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState("");
   const [ratingCounts, setRatingCounts] = useState({ up: 0, down: 0 });
@@ -114,7 +125,16 @@ function App() {
     setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
 
-  // --- FIXED: Use useCallback to stabilize the function reference ---
+  // --- Slideshow Effect ---
+  useEffect(() => {
+    if (view === "home") {
+      const interval = setInterval(() => {
+        setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
+      }, 5000); // Change slide every 5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [view]);
+
   const fetchRatings = useCallback(
     async (movieName) => {
       try {
@@ -129,11 +149,9 @@ function App() {
     [API_BASE]
   );
 
-  // --- FIXED: fetchRatings added to dependency array ---
   useEffect(() => {
     const tickets = JSON.parse(localStorage.getItem("blackwell_tickets")) || {};
     setAccessCodes(tickets);
-    // Fetch ratings on load
     fetchRatings(MOVIE_DATA[0].name);
   }, [fetchRatings]);
 
@@ -227,10 +245,35 @@ function App() {
   const handleResendCode = () => {
     if (!existingTicketCode || !email) return;
     setIsProcessing(true);
-    sendEmail(email, existingTicketCode);
-    setIsProcessing(false);
+    // Send email then switch tab
+    const SERVICE_ID = "service_9qvnylt";
+    const TEMPLATE_ID = "template_f43l5cc";
+    const PUBLIC_KEY = "RpZwEJtbEPw4skmFZ";
+
+    const emailParams = {
+      movie_name: selectedMovie.name,
+      code: existingTicketCode,
+      to_email: email,
+      to_name: email,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${existingTicketCode}\n\nWatch here: https://blackwell-films.onrender.com`,
+    };
+
+    emailjs
+      .send(SERVICE_ID, TEMPLATE_ID, emailParams, PUBLIC_KEY)
+      .then(() => {
+        showFeedback("success", "Code sent to " + email);
+        setGatekeeperMode("code"); // Auto-switch to enter code tab
+      })
+      .catch((err) => {
+        console.error("Email Failed", err);
+        showFeedback("error", "Email Failed: " + (err.text || "Check Address"));
+      })
+      .finally(() => {
+        setIsProcessing(false);
+      });
   };
 
+  // Generic Email Send (used by purchase)
   const sendEmail = (toEmail, code) => {
     const SERVICE_ID = "service_9qvnylt";
     const TEMPLATE_ID = "template_f43l5cc";
@@ -241,7 +284,7 @@ function App() {
       code: code,
       to_email: toEmail,
       to_name: toEmail,
-      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${code}\n\nWatch here: https://blackwell-films.vercel.app`,
+      message: `HERE IS YOUR ACCESS CODE!\n\nMovie: ${selectedMovie.name}\nAccess Code: ${code}\n\nWatch here: https://blackwell-films.onrender.com`,
     };
 
     emailjs
@@ -277,23 +320,37 @@ function App() {
     }
   };
 
-  const submitRating = async () => {
-    if (!userRating)
-      return showFeedback("error", "Please select thumbs up or down.");
-    setIsProcessing(true);
+  // --- IMMEDIATE RATING LOGIC ---
+  const handleThumbClick = async (type) => {
+    setUserRating(type);
+    // Optimistic UI update or wait for fetch? Let's just fire and fetch.
     try {
       await axios.post(`${API_BASE}/rate-movie`, {
         movieName: selectedMovie.name,
-        rating: userRating,
-        comment: userComment,
+        rating: type,
+        comment: "", // Just the vote
       });
-      showFeedback("success", "Thanks for your feedback!");
-      setUserRating(null);
-      setUserComment("");
-      // Refresh counts
       fetchRatings(selectedMovie.name);
     } catch (err) {
-      showFeedback("error", "Could not save rating.");
+      console.error("Vote failed");
+    }
+  };
+
+  // --- COMMENT ONLY SUBMIT ---
+  const handleSubmitComment = async () => {
+    if (!userComment) return;
+    setIsProcessing(true);
+    try {
+      // Send comment with 'none' rating so it doesn't double count votes in DB stats
+      await axios.post(`${API_BASE}/rate-movie`, {
+        movieName: selectedMovie.name,
+        rating: "none",
+        comment: userComment,
+      });
+      showFeedback("success", "Comment sent!");
+      setUserComment("");
+    } catch (err) {
+      showFeedback("error", "Could not save comment.");
     } finally {
       setIsProcessing(false);
     }
@@ -324,9 +381,13 @@ function App() {
       {/* --- NAV --- */}
       <nav className="nav-bar">
         <div className="nav-left">
-          <h2 className="nav-logo" onClick={() => setView("home")}>
-            BLACKWELL
-          </h2>
+          {/* HEADER LOGO IMAGE */}
+          <img
+            src="/logo12.png"
+            alt="BLACKWELL"
+            className="nav-logo-img"
+            onClick={() => setView("home")}
+          />
           <div className="nav-links">
             <span
               className={`nav-link ${view === "home" ? "active" : ""}`}
@@ -407,11 +468,16 @@ function App() {
                   >
                     <span className="play-icon">▶</span>
                   </div>
-                  <ProgressiveImage
-                    src={MOVIE_DATA[0].landscapeImage}
-                    alt={MOVIE_DATA[0].name}
-                    className="hero-image"
-                  />
+                  {/* FLUID SLIDESHOW */}
+                  {HERO_IMAGES.map((imgSrc, index) => (
+                    <img
+                      key={index}
+                      src={imgSrc}
+                      alt="Hero Slide"
+                      className="hero-slide"
+                      style={{ opacity: index === currentHeroIndex ? 1 : 0 }}
+                    />
+                  ))}
                 </div>
 
                 <div className="centered-container-lg">
@@ -419,6 +485,7 @@ function App() {
                     <div>
                       <h2 className="hero-title">{MOVIE_DATA[0].name}</h2>
                     </div>
+                    {/* CHANGED TEXT: You Have Access */}
                     <span
                       className={`badge ${
                         hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
@@ -426,7 +493,7 @@ function App() {
                       style={{ marginTop: "15px" }}
                     >
                       {hasAccess(MOVIE_DATA[0].name)
-                        ? "ACCESS GRANTED"
+                        ? "You Have Access"
                         : `KES ${MOVIE_DATA[0].price}`}
                     </span>
                   </div>
@@ -475,88 +542,6 @@ function App() {
                     >
                       IMDb
                     </a>
-                  </div>
-
-                  {/* --- HOME RATING CARD --- */}
-                  <div
-                    className="centered-container-lg"
-                    style={{
-                      maxWidth: "600px",
-                      marginTop: "0",
-                      marginBottom: "40px",
-                    }}
-                  >
-                    <div
-                      className="rating-section"
-                      style={{
-                        padding: "15px",
-                        background: "rgba(255,255,255,0.05)",
-                        borderRadius: "8px",
-                        border: "1px solid #333",
-                      }}
-                    >
-                      <h5
-                        style={{
-                          marginTop: 0,
-                          marginBottom: "10px",
-                          color: "var(--accent-color)",
-                          textAlign: "center",
-                        }}
-                      >
-                        SEEN THIS MOVIE? RATE IT
-                      </h5>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "25px",
-                          marginBottom: "15px",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <button
-                          onClick={() => setUserRating("up")}
-                          className={`rating-btn ${
-                            userRating === "up" ? "active" : ""
-                          }`}
-                        >
-                          👍{" "}
-                          <span className="rating-count">
-                            {ratingCounts.up}
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => setUserRating("down")}
-                          className={`rating-btn ${
-                            userRating === "down" ? "active" : ""
-                          }`}
-                        >
-                          👎{" "}
-                          <span className="rating-count">
-                            {ratingCounts.down}
-                          </span>
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="One line comment..."
-                        className="auth-input"
-                        value={userComment}
-                        onChange={(e) => setUserComment(e.target.value)}
-                        style={{
-                          width: "100%",
-                          marginBottom: "10px",
-                          fontSize: "12px",
-                          padding: "10px",
-                        }}
-                      />
-                      <button
-                        onClick={submitRating}
-                        disabled={isProcessing}
-                        className="btn btn-primary btn-sm"
-                      >
-                        SUBMIT
-                      </button>
-                    </div>
                   </div>
 
                   <div className="home-movie-info">
@@ -645,12 +630,98 @@ function App() {
                       </div>
                     </div>
                   </div>
+
+                  {/* --- SMALLER RATING CARD BELOW INFO --- */}
+                  <div
+                    className="centered-container-lg"
+                    style={{
+                      maxWidth: "500px",
+                      marginTop: "30px",
+                      marginBottom: "40px",
+                    }}
+                  >
+                    <div
+                      className="rating-section"
+                      style={{
+                        padding: "15px",
+                        background: "rgba(255,255,255,0.05)",
+                        borderRadius: "8px",
+                        border: "1px solid #333",
+                      }}
+                    >
+                      <h6
+                        style={{
+                          marginTop: 0,
+                          marginBottom: "10px",
+                          color: "var(--accent-color)",
+                          textAlign: "center",
+                          fontSize: "14px",
+                          letterSpacing: "1px",
+                        }}
+                      >
+                        SEEN THIS MOVIE? RATE IT
+                      </h6>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "20px",
+                          marginBottom: "10px",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <button
+                          onClick={() => handleThumbClick("up")}
+                          className={`rating-btn ${
+                            userRating === "up" ? "active" : ""
+                          }`}
+                        >
+                          👍{" "}
+                          <span className="rating-count">
+                            {ratingCounts.up}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handleThumbClick("down")}
+                          className={`rating-btn ${
+                            userRating === "down" ? "active" : ""
+                          }`}
+                        >
+                          👎{" "}
+                          <span className="rating-count">
+                            {ratingCounts.down}
+                          </span>
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Leave a comment"
+                        className="auth-input"
+                        value={userComment}
+                        onChange={(e) => setUserComment(e.target.value)}
+                        style={{
+                          width: "100%",
+                          marginBottom: "8px",
+                          fontSize: "12px",
+                          padding: "8px",
+                        }}
+                      />
+                      <button
+                        onClick={handleSubmitComment}
+                        disabled={isProcessing}
+                        className="btn btn-primary btn-sm"
+                        style={{ width: "100%" }}
+                      >
+                        SUBMIT COMMENT
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {view === "movies" && (
               <div className="centered-container-lg">
+                {/* TITLE IN GOLD */}
                 <h1
                   style={{
                     textAlign: "center",
@@ -658,6 +729,7 @@ function App() {
                     fontWeight: "300",
                     letterSpacing: "2px",
                     fontFamily: "Playfair Display, serif",
+                    color: "var(--accent-color)",
                   }}
                 >
                   MOVIES
@@ -743,7 +815,7 @@ function App() {
                         }`}
                       >
                         {hasAccess(selectedMovie.name)
-                          ? "ACCESS GRANTED"
+                          ? "You Have Access"
                           : `KES ${selectedMovie.price}`}
                       </span>
                       <span className="badge" style={{ background: "#333" }}>
@@ -878,7 +950,7 @@ function App() {
                         }}
                       >
                         <button
-                          onClick={() => setUserRating("up")}
+                          onClick={() => handleThumbClick("up")}
                           className={`rating-btn ${
                             userRating === "up" ? "active" : ""
                           }`}
@@ -889,7 +961,7 @@ function App() {
                           </span>
                         </button>
                         <button
-                          onClick={() => setUserRating("down")}
+                          onClick={() => handleThumbClick("down")}
                           className={`rating-btn ${
                             userRating === "down" ? "active" : ""
                           }`}
@@ -902,19 +974,19 @@ function App() {
                       </div>
                       <input
                         type="text"
-                        placeholder="Leave a short comment..."
+                        placeholder="Leave a comment"
                         className="auth-input"
                         value={userComment}
                         onChange={(e) => setUserComment(e.target.value)}
                         style={{ width: "100%", marginBottom: "10px" }}
                       />
                       <button
-                        onClick={submitRating}
+                        onClick={handleSubmitComment}
                         disabled={isProcessing}
                         className="btn btn-primary btn-sm"
                         style={{ width: "auto" }}
                       >
-                        SUBMIT RATING
+                        SUBMIT COMMENT
                       </button>
                     </div>
                   </div>
@@ -947,13 +1019,13 @@ function App() {
       <footer className="app-footer">
         <div className="footer-grid">
           <div>
-            <h4
-              className="nav-logo"
-              style={{ margin: "0 0 10px 0", fontSize: "24px" }}
-            >
-              BLACKWELL
-            </h4>
-            <p style={{ color: "#666", fontSize: "12px" }}>
+            {/* FOOTER LOGO IMAGE */}
+            <img
+              src="/logo13.png"
+              alt="BLACKWELL"
+              className="footer-logo-img"
+            />
+            <p style={{ color: "#666", fontSize: "12px", marginTop: "10px" }}>
               © 2025 Blackwell Films.
             </p>
           </div>
@@ -1055,7 +1127,7 @@ function App() {
               {gatekeeperMode === "buy" && (
                 <div style={{ textAlign: "center" }}>
                   <p style={{ color: "#ccc", marginBottom: "20px" }}>
-                    Get 90 days access on up to 3 devices.
+                    Get 90-day access on up to 3 devices.
                     <br />
                     We'll email you a unique access code.
                   </p>
@@ -1068,7 +1140,6 @@ function App() {
                     style={{ marginBottom: "15px", textAlign: "center" }}
                   />
 
-                  {/* EXISTING TICKET WARNING LOGIC */}
                   {existingTicketCode ? (
                     <div
                       style={{
