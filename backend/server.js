@@ -18,13 +18,17 @@ const generateCode = () => {
 
 // --- ROUTES ---
 
-// 1. CHECK COUPON
+// 1. CHECK COUPON (Case Insensitive)
 app.post("/api/check-coupon", async (req, res) => {
   const { code } = req.body;
+  if (!code) return res.json({ valid: false, message: "No code provided" });
+
   try {
+    const normalizedCode = code.toUpperCase().trim();
     const coupon = await pool.query("SELECT * FROM coupons WHERE code = $1", [
-      code,
+      normalizedCode,
     ]);
+
     if (coupon.rows.length > 0) {
       const data = coupon.rows[0];
       if (!data.is_active) {
@@ -53,12 +57,14 @@ app.post("/api/purchase-guest", async (req, res) => {
   try {
     let finalPrice = BASE_PRICE;
     let couponId = null;
+    let normalizedCoupon = null;
 
     // A. Validate Coupon Logic (Server Side Calculation)
     if (couponCode) {
+      normalizedCoupon = couponCode.toUpperCase().trim();
       const couponRes = await pool.query(
         "SELECT * FROM coupons WHERE code = $1",
-        [couponCode]
+        [normalizedCoupon]
       );
       if (couponRes.rows.length > 0) {
         const coupon = couponRes.rows[0];
@@ -89,6 +95,7 @@ app.post("/api/purchase-guest", async (req, res) => {
 
         // Verify Amount (Paystack returns amount in kobo/cents)
         const paidAmount = paystackRes.data.data.amount / 100;
+        // Allow small floating point difference (epsilon check usually better, but < comparison works here)
         if (paidAmount < finalPrice) {
           return res
             .status(400)
@@ -108,7 +115,7 @@ app.post("/api/purchase-guest", async (req, res) => {
 
     const newTicket = await pool.query(
       "INSERT INTO tickets (email, code, movie_name, expiry_date, coupon_used) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [email, code, movieName, expiryDate, couponCode || null]
+      [email, code, movieName, expiryDate, normalizedCoupon || null]
     );
 
     // D. Update Coupon Usage
@@ -249,23 +256,23 @@ app.post("/api/admin/login", (req, res) => {
 
 app.get("/api/admin/dashboard", verifyAdmin, async (req, res) => {
   try {
-    // 1. Calculate Standard Revenue
-    // (We could improve this by summing actual prices, but based on current requirements:)
     const allTickets = await pool.query("SELECT * FROM tickets");
     const coupons = await pool.query(
       "SELECT * FROM coupons ORDER BY created_at DESC"
     );
 
     let totalRevenue = 0;
-
-    // Create a map for quick coupon lookup
     const couponMap = {};
     coupons.rows.forEach((c) => (couponMap[c.code] = c.discount_percent));
 
     allTickets.rows.forEach((ticket) => {
       let price = BASE_PRICE;
-      if (ticket.coupon_used && couponMap[ticket.coupon_used] !== undefined) {
-        const discount = couponMap[ticket.coupon_used];
+      // ticket.coupon_used might be mixed case in DB, ensure we match correctly
+      const usedCoupon = ticket.coupon_used
+        ? ticket.coupon_used.toUpperCase()
+        : null;
+      if (usedCoupon && couponMap[usedCoupon] !== undefined) {
+        const discount = couponMap[usedCoupon];
         price = BASE_PRICE - (BASE_PRICE * discount) / 100;
       }
       totalRevenue += price;
@@ -294,9 +301,11 @@ app.get("/api/admin/dashboard", verifyAdmin, async (req, res) => {
 app.post("/api/admin/coupon", verifyAdmin, async (req, res) => {
   try {
     const { code, discount_percent } = req.body;
+    // FORCE UPPERCASE ON CREATION
+    const normalizedCode = code.toUpperCase().trim();
     const newCode = await pool.query(
       "INSERT INTO coupons (code, discount_percent) VALUES ($1, $2) RETURNING *",
-      [code, discount_percent]
+      [normalizedCode, discount_percent]
     );
     res.json({ success: true, data: newCode.rows[0] });
   } catch (err) {
@@ -313,6 +322,16 @@ app.patch("/api/admin/coupon/:id", verifyAdmin, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed" });
+  }
+});
+
+// NEW: DELETE COUPON
+app.delete("/api/admin/coupon/:id", verifyAdmin, async (req, res) => {
+  try {
+    await pool.query("DELETE FROM coupons WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed" });
   }
 });
 

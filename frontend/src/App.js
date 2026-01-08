@@ -218,7 +218,7 @@ function App() {
     setView(previousView);
   };
 
-  // --- COUPON LOGIC (FIXED) ---
+  // --- COUPON LOGIC (FIXED & CASE INSENSITIVE) ---
   const handleCheckCoupon = async () => {
     if (!couponInput) {
       showFeedback("error", "Please enter a coupon code.");
@@ -230,7 +230,10 @@ function App() {
         code: couponInput,
       });
       if (res.data.valid) {
-        setAppliedCoupon({ code: couponInput, discount: res.data.discount });
+        setAppliedCoupon({
+          code: couponInput.toUpperCase(),
+          discount: res.data.discount,
+        });
         showFeedback("success", res.data.message);
       } else {
         setAppliedCoupon(null);
@@ -476,7 +479,6 @@ function App() {
     }
   };
 
-  // FIXED: Correct variable names used for creation
   const createCoupon = async () => {
     if (!newCoupon.code) return;
     try {
@@ -504,6 +506,20 @@ function App() {
       fetchAdminData();
     } catch (err) {
       showFeedback("error", "Update failed");
+    }
+  };
+
+  // NEW: DELETE FUNCTION
+  const deleteCoupon = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this coupon?")) return;
+    try {
+      await axios.delete(`${API_BASE}/admin/coupon/${id}`, {
+        headers: { "x-admin-pin": adminPin },
+      });
+      fetchAdminData();
+      showFeedback("success", "Coupon Deleted");
+    } catch (err) {
+      showFeedback("error", "Delete failed");
     }
   };
 
@@ -604,8 +620,9 @@ function App() {
             placeholder="COUPON NAME (e.g. DAVID)"
             className="auth-input"
             value={newCoupon.code}
+            // FIXED: Force uppercase on input
             onChange={(e) =>
-              setNewCoupon({ ...newCoupon, code: e.target.value.toLowerCase() })
+              setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })
             }
           />
           <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
@@ -667,8 +684,19 @@ function App() {
                           c.is_active ? "active" : "inactive"
                         }`}
                         onClick={() => toggleCoupon(c.id, c.is_active)}
+                        style={{ marginRight: "10px" }}
                       >
                         {c.is_active ? "DEACTIVATE" : "ACTIVATE"}
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{
+                          color: "#e74c3c",
+                          border: "1px solid #e74c3c",
+                        }}
+                        onClick={() => deleteCoupon(c.id)}
+                      >
+                        DELETE
                       </button>
                     </td>
                   </tr>
@@ -1594,7 +1622,10 @@ function App() {
                         textTransform: "uppercase",
                       }}
                       value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value)}
+                      // FIXED: Force uppercase input
+                      onChange={(e) =>
+                        setCouponInput(e.target.value.toUpperCase())
+                      }
                     />
                     <button
                       onClick={handleCheckCoupon}
