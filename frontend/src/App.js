@@ -221,11 +221,16 @@ function App() {
     if (!window.PaystackPop)
       return showFeedback("error", "Payment system loading...");
 
+    // CUSTOM REFERENCE GENERATION
+    // This creates a unique ID like "BW_1736245892123"
+    const uniqueRef = "BW_" + new Date().getTime().toString();
+
     const handler = window.PaystackPop.setup({
       key: "pk_live_36e3a37b7428b85df3f32582e043ffb49e0e1ed3",
       email: email,
       amount: selectedMovie.price * 100,
       currency: "KES",
+      ref: uniqueRef, // Explicitly pass our custom reference
       callback: (response) => processPurchase(response.reference),
       onClose: () => showFeedback("error", "Payment cancelled."),
     });
