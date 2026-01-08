@@ -7,7 +7,7 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5555;
 const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || "Blackwell2026";
-const BASE_PRICE = 250; // Centralized price
+const BASE_PRICE = 250;
 
 app.use(cors());
 app.use(express.json());
@@ -18,7 +18,7 @@ const generateCode = () => {
 
 // --- ROUTES ---
 
-// 1. CHECK COUPON (Case Insensitive)
+// 1. CHECK COUPON
 app.post("/api/check-coupon", async (req, res) => {
   const { code } = req.body;
   if (!code) return res.json({ valid: false, message: "No code provided" });
@@ -47,7 +47,7 @@ app.post("/api/check-coupon", async (req, res) => {
   }
 });
 
-// 2. PURCHASE & GENERATE TICKET (Handles Paid & Free)
+// 2. PURCHASE & GENERATE TICKET (Now saves amount_paid)
 app.post("/api/purchase-guest", async (req, res) => {
   const { email, reference, movieName, couponCode } = req.body;
 
@@ -59,7 +59,7 @@ app.post("/api/purchase-guest", async (req, res) => {
     let couponId = null;
     let normalizedCoupon = null;
 
-    // A. Validate Coupon Logic (Server Side Calculation)
+    // A. Validate Coupon Logic
     if (couponCode) {
       normalizedCoupon = couponCode.toUpperCase().trim();
       const couponRes = await pool.query(
@@ -78,12 +78,10 @@ app.post("/api/purchase-guest", async (req, res) => {
 
     // B. Payment Verification
     if (finalPrice > 0) {
-      // Must have a payment reference
       if (!reference)
         return res
           .status(400)
           .json({ success: false, message: "Payment required." });
-
       try {
         const paystackUrl = `https://api.paystack.co/transaction/verify/${reference}`;
         const paystackRes = await axios.get(paystackUrl, {
@@ -92,10 +90,7 @@ app.post("/api/purchase-guest", async (req, res) => {
           },
           timeout: 10000,
         });
-
-        // Verify Amount (Paystack returns amount in kobo/cents)
         const paidAmount = paystackRes.data.data.amount / 100;
-        // Allow small floating point difference (epsilon check usually better, but < comparison works here)
         if (paidAmount < finalPrice) {
           return res
             .status(400)
@@ -108,14 +103,14 @@ app.post("/api/purchase-guest", async (req, res) => {
       }
     }
 
-    // C. Generate & Save Ticket
+    // C. Generate & Save Ticket (WITH AMOUNT PAID)
     const code = generateCode();
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 90);
 
     const newTicket = await pool.query(
-      "INSERT INTO tickets (email, code, movie_name, expiry_date, coupon_used) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [email, code, movieName, expiryDate, normalizedCoupon || null]
+      "INSERT INTO tickets (email, code, movie_name, expiry_date, coupon_used, amount_paid) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+      [email, code, movieName, expiryDate, normalizedCoupon || null, finalPrice]
     );
 
     // D. Update Coupon Usage
@@ -138,7 +133,7 @@ app.post("/api/purchase-guest", async (req, res) => {
   }
 });
 
-// 3. CHECK TICKET STATUS
+// 3. CHECK STATUS
 app.post("/api/check-ticket-status", async (req, res) => {
   const { email, movieName } = req.body;
   try {
@@ -160,7 +155,7 @@ app.post("/api/check-ticket-status", async (req, res) => {
   }
 });
 
-// 4. VERIFY TICKET (Login)
+// 4. VERIFY TICKET
 app.post("/api/verify-ticket", async (req, res) => {
   const { code, movieName } = req.body;
   const userIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
@@ -254,30 +249,19 @@ app.post("/api/admin/login", (req, res) => {
   else res.status(401).json({ success: false });
 });
 
+// FIXED: Now sums amount_paid directly
 app.get("/api/admin/dashboard", verifyAdmin, async (req, res) => {
   try {
-    const allTickets = await pool.query("SELECT * FROM tickets");
+    // Sum the 'amount_paid' column
+    const revenueRes = await pool.query(
+      "SELECT SUM(amount_paid) as total FROM tickets"
+    );
+    const totalRevenue = parseFloat(revenueRes.rows[0].total) || 0;
+
+    const ticketsCount = await pool.query("SELECT COUNT(*) FROM tickets");
     const coupons = await pool.query(
       "SELECT * FROM coupons ORDER BY created_at DESC"
     );
-
-    let totalRevenue = 0;
-    const couponMap = {};
-    coupons.rows.forEach((c) => (couponMap[c.code] = c.discount_percent));
-
-    allTickets.rows.forEach((ticket) => {
-      let price = BASE_PRICE;
-      // ticket.coupon_used might be mixed case in DB, ensure we match correctly
-      const usedCoupon = ticket.coupon_used
-        ? ticket.coupon_used.toUpperCase()
-        : null;
-      if (usedCoupon && couponMap[usedCoupon] !== undefined) {
-        const discount = couponMap[usedCoupon];
-        price = BASE_PRICE - (BASE_PRICE * discount) / 100;
-      }
-      totalRevenue += price;
-    });
-
     const recent = await pool.query(
       "SELECT * FROM tickets ORDER BY id DESC LIMIT 1000"
     );
@@ -287,7 +271,7 @@ app.get("/api/admin/dashboard", verifyAdmin, async (req, res) => {
 
     res.json({
       revenue: totalRevenue,
-      totalTickets: allTickets.rows.length,
+      totalTickets: parseInt(ticketsCount.rows[0].count),
       recent: recent.rows,
       ratings: ratings.rows,
       coupons: coupons.rows,
@@ -301,7 +285,6 @@ app.get("/api/admin/dashboard", verifyAdmin, async (req, res) => {
 app.post("/api/admin/coupon", verifyAdmin, async (req, res) => {
   try {
     const { code, discount_percent } = req.body;
-    // FORCE UPPERCASE ON CREATION
     const normalizedCode = code.toUpperCase().trim();
     const newCode = await pool.query(
       "INSERT INTO coupons (code, discount_percent) VALUES ($1, $2) RETURNING *",
@@ -325,7 +308,6 @@ app.patch("/api/admin/coupon/:id", verifyAdmin, async (req, res) => {
   }
 });
 
-// NEW: DELETE COUPON
 app.delete("/api/admin/coupon/:id", verifyAdmin, async (req, res) => {
   try {
     await pool.query("DELETE FROM coupons WHERE id = $1", [req.params.id]);
