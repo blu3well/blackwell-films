@@ -115,12 +115,25 @@ function App() {
   const [userComment, setUserComment] = useState("");
   const [ratingCounts, setRatingCounts] = useState({ up: 0, down: 0 });
 
+  // --- ADMIN STATE ---
+  const [adminPin, setAdminPin] = useState("");
+  const [adminData, setAdminData] = useState(null);
+  const [newAffiliate, setNewAffiliate] = useState({ code: "", owner: "" });
+
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
   // --- SPLASH SCREEN & PRELOADER ---
   useEffect(() => {
+    // Check for Admin Secret URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "admin") {
+      setView("admin-login");
+      setLoading(false);
+      return;
+    }
+
     HERO_IMAGES.forEach((src) => {
       const img = new Image();
       img.src = src;
@@ -221,8 +234,7 @@ function App() {
     if (!window.PaystackPop)
       return showFeedback("error", "Payment system loading...");
 
-    // CUSTOM REFERENCE GENERATION
-    // This creates a unique ID like "BW_1736245892123"
+    // CUSTOM REFERENCE: BW_ + Timestamp
     const uniqueRef = "BW_" + new Date().getTime().toString();
 
     const handler = window.PaystackPop.setup({
@@ -230,7 +242,7 @@ function App() {
       email: email,
       amount: selectedMovie.price * 100,
       currency: "KES",
-      ref: uniqueRef, // Explicitly pass our custom reference
+      ref: uniqueRef,
       callback: (response) => processPurchase(response.reference),
       onClose: () => showFeedback("error", "Payment cancelled."),
     });
@@ -332,7 +344,7 @@ function App() {
         saveTicket(selectedMovie.name, inputCode);
         setShowGatekeeper(false);
         setIsPlaying(true);
-        showFeedback("success", "Access Granted!");
+        showFeedback("success", res.data.message || "Access Granted!");
       }
     } catch (err) {
       showFeedback("error", err.response?.data?.message || "Invalid Code");
@@ -379,6 +391,62 @@ function App() {
     localStorage.setItem("blackwell_tickets", JSON.stringify(newTickets));
   };
 
+  // --- ADMIN FUNCTIONS ---
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${API_BASE}/admin/login`, {
+        pin: adminPin,
+      });
+      if (res.data.success) {
+        setView("admin-dashboard");
+        fetchAdminData();
+      }
+    } catch (err) {
+      showFeedback("error", "Invalid PIN");
+    }
+  };
+
+  const fetchAdminData = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/admin/dashboard`, {
+        headers: { "x-admin-pin": adminPin },
+      });
+      setAdminData(res.data);
+    } catch (err) {
+      showFeedback("error", "Failed to load data");
+    }
+  };
+
+  const createAffiliate = async () => {
+    if (!newAffiliate.code || !newAffiliate.owner) return;
+    try {
+      await axios.post(
+        `${API_BASE}/admin/affiliate`,
+        { ...newAffiliate },
+        { headers: { "x-admin-pin": adminPin } }
+      );
+      setNewAffiliate({ code: "", owner: "" });
+      fetchAdminData();
+      showFeedback("success", "Affiliate Code Created");
+    } catch (err) {
+      showFeedback("error", "Failed. Code might exist.");
+    }
+  };
+
+  const toggleAffiliate = async (id, currentStatus) => {
+    try {
+      await axios.patch(
+        `${API_BASE}/admin/affiliate/${id}`,
+        { is_active: !currentStatus },
+        { headers: { "x-admin-pin": adminPin } }
+      );
+      fetchAdminData();
+    } catch (err) {
+      showFeedback("error", "Update failed");
+    }
+  };
+
   const filteredResults = movies.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -391,6 +459,211 @@ function App() {
     );
   }
 
+  // --- ADMIN VIEWS ---
+  if (view === "admin-login") {
+    return (
+      <div className="admin-login-container">
+        <h2 style={{ color: "#fff", marginBottom: "20px" }}>COMMAND ACCESS</h2>
+        <form onSubmit={handleAdminLogin}>
+          <input
+            type="password"
+            placeholder="ENTER PIN"
+            className="auth-input"
+            value={adminPin}
+            onChange={(e) => setAdminPin(e.target.value)}
+            style={{ textAlign: "center", letterSpacing: "5px" }}
+          />
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: "100%" }}
+          >
+            UNLOCK
+          </button>
+        </form>
+        <button
+          onClick={() => setView("home")}
+          className="btn btn-ghost"
+          style={{ marginTop: "20px" }}
+        >
+          EXIT
+        </button>
+      </div>
+    );
+  }
+
+  if (view === "admin-dashboard" && adminData) {
+    return (
+      <div className="admin-dashboard">
+        <div className="dashboard-header">
+          <h1 className="section-title">BLACKWELL COMMAND</h1>
+          <button onClick={() => setView("home")} className="btn btn-ghost">
+            LOGOUT
+          </button>
+        </div>
+
+        <div className="stat-grid">
+          <div className="stat-card gold">
+            <span style={{ fontSize: "12px", letterSpacing: "1px" }}>
+              TOTAL REVENUE
+            </span>
+            <span className="stat-value">
+              KES {adminData.revenue.toLocaleString()}
+            </span>
+          </div>
+          <div className="stat-card white">
+            <span style={{ fontSize: "12px", letterSpacing: "1px" }}>
+              PAID TICKETS
+            </span>
+            <span className="stat-value">{adminData.totalTickets}</span>
+          </div>
+          <div className="stat-card dark">
+            <span style={{ fontSize: "12px", letterSpacing: "1px" }}>
+              AFFILIATE USES
+            </span>
+            <span className="stat-value">
+              {adminData.affiliates.reduce((acc, curr) => acc + curr.uses, 0)}
+            </span>
+          </div>
+        </div>
+
+        <h3 className="section-title">AFFILIATE CODES</h3>
+        <div className="admin-input-group">
+          <input
+            type="text"
+            placeholder="CODE NAME (e.g. VIP_JOHN)"
+            className="auth-input"
+            value={newAffiliate.code}
+            onChange={(e) =>
+              setNewAffiliate({
+                ...newAffiliate,
+                code: e.target.value.toUpperCase(),
+              })
+            }
+          />
+          <input
+            type="text"
+            placeholder="OWNER NAME"
+            className="auth-input"
+            value={newAffiliate.owner}
+            onChange={(e) =>
+              setNewAffiliate({ ...newAffiliate, owner: e.target.value })
+            }
+          />
+          <button onClick={createAffiliate} className="btn btn-success">
+            + CREATE
+          </button>
+        </div>
+
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>CODE</th>
+                <th>OWNER</th>
+                <th>USES</th>
+                <th>STATUS</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adminData.affiliates.map((aff) => (
+                <tr key={aff.id}>
+                  <td style={{ fontWeight: "bold", color: "#fff" }}>
+                    {aff.code}
+                  </td>
+                  <td>{aff.owner}</td>
+                  <td>{aff.uses}</td>
+                  <td>
+                    <span
+                      className={`status-badge ${
+                        aff.is_active ? "status-active" : "status-inactive"
+                      }`}
+                    >
+                      {aff.is_active ? "ACTIVE" : "INACTIVE"}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className={`toggle-btn ${
+                        aff.is_active ? "active" : "inactive"
+                      }`}
+                      onClick={() => toggleAffiliate(aff.id, aff.is_active)}
+                    >
+                      {aff.is_active ? "DEACTIVATE" : "ACTIVATE"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="section-title">RECENT SALES</h3>
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>DATE</th>
+                <th>EMAIL</th>
+                <th>CODE</th>
+                <th>MOVIE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adminData.recent.map((t) => (
+                <tr key={t.id}>
+                  <td>{new Date(t.created_at).toLocaleDateString()}</td>
+                  <td>{t.email}</td>
+                  <td
+                    style={{
+                      fontFamily: "monospace",
+                      color: "var(--accent-color)",
+                    }}
+                  >
+                    {t.code}
+                  </td>
+                  <td>{t.movie_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="section-title">FEEDBACK & RATINGS</h3>
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>DATE</th>
+                <th>RATING</th>
+                <th>COMMENT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adminData.ratings.map((r, i) => (
+                <tr key={i}>
+                  <td>{new Date(r.created_at).toLocaleDateString()}</td>
+                  <td>
+                    {r.rating === "up"
+                      ? "👍"
+                      : r.rating === "down"
+                      ? "👎"
+                      : "-"}
+                  </td>
+                  <td style={{ fontStyle: "italic" }}>
+                    {r.comment || "No comment"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // --- NORMAL APP RENDER ---
   return (
     <div className="app-container">
       {status.message && (
