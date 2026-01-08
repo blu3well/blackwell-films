@@ -218,9 +218,13 @@ function App() {
     setView(previousView);
   };
 
-  // --- COUPON LOGIC ---
+  // --- COUPON LOGIC (FIXED) ---
   const handleCheckCoupon = async () => {
-    if (!couponInput) return;
+    if (!couponInput) {
+      showFeedback("error", "Please enter a coupon code.");
+      return;
+    }
+
     try {
       const res = await axios.post(`${API_BASE}/check-coupon`, {
         code: couponInput,
@@ -472,12 +476,14 @@ function App() {
     }
   };
 
+  // FIXED: Correct variable names used for creation
   const createCoupon = async () => {
     if (!newCoupon.code) return;
     try {
       await axios.post(
         `${API_BASE}/admin/coupon`,
-        { ...newCoupon },
+        // Mapping discount to discount_percent to match server
+        { code: newCoupon.code, discount_percent: newCoupon.discount },
         { headers: { "x-admin-pin": adminPin } }
       );
       setNewCoupon({ code: "", discount: 0 });
@@ -636,7 +642,6 @@ function App() {
             </thead>
             <tbody>
               {couponList.map((c) => {
-                // Est Revenue = Uses * (250 * (1 - discount/100))
                 const pricePaid = 250 - (250 * c.discount_percent) / 100;
                 const estRev = c.uses * pricePaid;
                 return (
