@@ -110,6 +110,10 @@ function App() {
 
   const [existingTicketCode, setExistingTicketCode] = useState(null);
 
+  // COUPON STATE
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code: "ABC", discount: 50 }
+
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState("");
@@ -118,7 +122,7 @@ function App() {
   // --- ADMIN STATE ---
   const [adminPin, setAdminPin] = useState("");
   const [adminData, setAdminData] = useState(null);
-  const [newAffiliate, setNewAffiliate] = useState({ code: "", owner: "" });
+  const [newCoupon, setNewCoupon] = useState({ code: "", discount: 0 });
 
   // PAGINATION STATE
   const [salesPage, setSalesPage] = useState(1);
@@ -193,10 +197,13 @@ function App() {
     if (hasAccess(movie.name)) {
       setIsPlaying(true);
     } else {
+      // Reset Modal State
       setShowGatekeeper(true);
       setGatekeeperMode("buy");
       setExistingTicketCode(null);
       setEmail("");
+      setCouponInput("");
+      setAppliedCoupon(null);
     }
   };
 
@@ -209,6 +216,31 @@ function App() {
 
   const handleBack = () => {
     setView(previousView);
+  };
+
+  // --- COUPON LOGIC ---
+  const handleCheckCoupon = async () => {
+    if (!couponInput) return;
+    try {
+      const res = await axios.post(`${API_BASE}/check-coupon`, {
+        code: couponInput,
+      });
+      if (res.data.valid) {
+        setAppliedCoupon({ code: couponInput, discount: res.data.discount });
+        showFeedback("success", res.data.message);
+      } else {
+        setAppliedCoupon(null);
+        showFeedback("error", res.data.message);
+      }
+    } catch (err) {
+      showFeedback("error", "Failed to check coupon");
+    }
+  };
+
+  const calculateFinalPrice = () => {
+    if (!appliedCoupon) return selectedMovie.price;
+    const discountAmount = selectedMovie.price * (appliedCoupon.discount / 100);
+    return Math.max(0, selectedMovie.price - discountAmount);
   };
 
   const handlePreCheckPurchase = async () => {
@@ -224,30 +256,42 @@ function App() {
       if (res.data.exists) {
         setExistingTicketCode(res.data.code);
         showFeedback("error", "This email already has an active ticket.");
+        setIsProcessing(false);
       } else {
-        handlePaystack();
+        const finalPrice = calculateFinalPrice();
+        if (finalPrice === 0) {
+          // FREE TICKET FLOW
+          processPurchase("FREE_COUPON");
+        } else {
+          // PAID FLOW
+          handlePaystack(finalPrice);
+        }
       }
     } catch (err) {
       showFeedback("error", "Connection error checking status.");
-    } finally {
       setIsProcessing(false);
     }
   };
 
-  const handlePaystack = () => {
-    if (!window.PaystackPop)
+  const handlePaystack = (amountToPay) => {
+    if (!window.PaystackPop) {
+      setIsProcessing(false);
       return showFeedback("error", "Payment system loading...");
+    }
 
     const uniqueRef = "BW_" + new Date().getTime().toString();
 
     const handler = window.PaystackPop.setup({
       key: "pk_live_36e3a37b7428b85df3f32582e043ffb49e0e1ed3",
       email: email,
-      amount: selectedMovie.price * 100,
+      amount: amountToPay * 100, // KES to Cents
       currency: "KES",
       ref: uniqueRef,
       callback: (response) => processPurchase(response.reference),
-      onClose: () => showFeedback("error", "Payment cancelled."),
+      onClose: () => {
+        showFeedback("error", "Payment cancelled.");
+        setIsProcessing(false);
+      },
     });
     handler.openIframe();
   };
@@ -261,6 +305,7 @@ function App() {
         email: recipientEmail,
         reference,
         movieName: selectedMovie.name,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
       });
 
       if (res.data.success) {
@@ -365,7 +410,7 @@ function App() {
         movieName: selectedMovie.name,
         rating: type,
         comment: "",
-        ticketCode: myTicket, // Sending code to lookup email
+        ticketCode: myTicket,
       });
       fetchRatings(selectedMovie.name);
     } catch (err) {
@@ -383,7 +428,7 @@ function App() {
         movieName: selectedMovie.name,
         rating: "none",
         comment: userComment,
-        ticketCode: myTicket, // Sending code to lookup email
+        ticketCode: myTicket,
       });
       showFeedback("success", "Comment sent!");
       setUserComment("");
@@ -427,26 +472,26 @@ function App() {
     }
   };
 
-  const createAffiliate = async () => {
-    if (!newAffiliate.code || !newAffiliate.owner) return;
+  const createCoupon = async () => {
+    if (!newCoupon.code) return;
     try {
       await axios.post(
-        `${API_BASE}/admin/affiliate`,
-        { ...newAffiliate },
+        `${API_BASE}/admin/coupon`,
+        { ...newCoupon },
         { headers: { "x-admin-pin": adminPin } }
       );
-      setNewAffiliate({ code: "", owner: "" });
+      setNewCoupon({ code: "", discount: 0 });
       fetchAdminData();
-      showFeedback("success", "Affiliate Code Created");
+      showFeedback("success", "Coupon Created");
     } catch (err) {
       showFeedback("error", "Failed. Code might exist.");
     }
   };
 
-  const toggleAffiliate = async (id, currentStatus) => {
+  const toggleCoupon = async (id, currentStatus) => {
     try {
       await axios.patch(
-        `${API_BASE}/admin/affiliate/${id}`,
+        `${API_BASE}/admin/coupon/${id}`,
         { is_active: !currentStatus },
         { headers: { "x-admin-pin": adminPin } }
       );
@@ -510,6 +555,7 @@ function App() {
   if (view === "admin-dashboard" && adminData) {
     const paginatedSales = paginate(adminData.recent, salesPage);
     const paginatedRatings = paginate(adminData.ratings, ratingsPage);
+    const couponList = adminData.coupons || [];
 
     return (
       <div className="admin-dashboard">
@@ -526,23 +572,105 @@ function App() {
               TOTAL REVENUE
             </span>
             <span className="stat-value">
-              KES {adminData.revenue.toLocaleString()}
+              KES {Math.round(adminData.revenue).toLocaleString()}
             </span>
           </div>
           <div className="stat-card white">
             <span style={{ fontSize: "12px", letterSpacing: "1px" }}>
-              PAID TICKETS
+              TOTAL TICKETS
             </span>
             <span className="stat-value">{adminData.totalTickets}</span>
           </div>
           <div className="stat-card dark">
             <span style={{ fontSize: "12px", letterSpacing: "1px" }}>
-              AFFILIATE USES
+              ACTIVE COUPONS
             </span>
             <span className="stat-value">
-              {adminData.affiliates.reduce((acc, curr) => acc + curr.uses, 0)}
+              {couponList.filter((c) => c.is_active).length}
             </span>
           </div>
+        </div>
+
+        <h3 className="section-title">COUPON MANAGER</h3>
+        <div className="admin-input-group" style={{ alignItems: "center" }}>
+          <input
+            type="text"
+            placeholder="COUPON NAME (e.g. DAVID)"
+            className="auth-input"
+            value={newCoupon.code}
+            onChange={(e) =>
+              setNewCoupon({ ...newCoupon, code: e.target.value.toLowerCase() })
+            }
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <span style={{ color: "#aaa", fontSize: "12px" }}>DISCOUNT %:</span>
+            <input
+              type="number"
+              placeholder="0-100"
+              className="auth-input"
+              style={{ width: "80px" }}
+              value={newCoupon.discount}
+              onChange={(e) =>
+                setNewCoupon({
+                  ...newCoupon,
+                  discount: parseInt(e.target.value) || 0,
+                })
+              }
+            />
+          </div>
+          <button onClick={createCoupon} className="btn btn-success">
+            + CREATE
+          </button>
+        </div>
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>CODE</th>
+                <th>DISCOUNT</th>
+                <th>USES</th>
+                <th>REVENUE GEN (EST)</th>
+                <th>STATUS</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {couponList.map((c) => {
+                // Est Revenue = Uses * (250 * (1 - discount/100))
+                const pricePaid = 250 - (250 * c.discount_percent) / 100;
+                const estRev = c.uses * pricePaid;
+                return (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: "bold", color: "#fff" }}>
+                      {c.code}
+                    </td>
+                    <td>{c.discount_percent}%</td>
+                    <td>{c.uses}</td>
+                    <td>KES {Math.round(estRev).toLocaleString()}</td>
+                    <td>
+                      <span
+                        className={`status-badge ${
+                          c.is_active ? "status-active" : "status-inactive"
+                        }`}
+                      >
+                        {c.is_active ? "ACTIVE" : "INACTIVE"}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className={`toggle-btn ${
+                          c.is_active ? "active" : "inactive"
+                        }`}
+                        onClick={() => toggleCoupon(c.id, c.is_active)}
+                      >
+                        {c.is_active ? "DEACTIVATE" : "ACTIVATE"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
 
         <h3 className="section-title">RECENT SALES</h3>
@@ -552,7 +680,7 @@ function App() {
               <tr>
                 <th>DATE</th>
                 <th>EMAIL</th>
-                <th>CODE</th>
+                <th>COUPON USED</th>
                 <th>STATUS</th>
               </tr>
             </thead>
@@ -563,13 +691,8 @@ function App() {
                   <tr key={t.id}>
                     <td>{new Date(t.created_at).toLocaleDateString()}</td>
                     <td>{t.email}</td>
-                    <td
-                      style={{
-                        fontFamily: "monospace",
-                        color: "var(--accent-color)",
-                      }}
-                    >
-                      {t.code}
+                    <td style={{ color: "var(--accent-color)" }}>
+                      {t.coupon_used || "-"}
                     </td>
                     <td>
                       <span
@@ -671,77 +794,6 @@ function App() {
               NEXT
             </button>
           </div>
-        </div>
-
-        <h3 className="section-title">AFFILIATE CODES</h3>
-        <div className="admin-input-group">
-          <input
-            type="text"
-            placeholder="CODE NAME (e.g. VIP_JOHN)"
-            className="auth-input"
-            value={newAffiliate.code}
-            onChange={(e) =>
-              setNewAffiliate({
-                ...newAffiliate,
-                code: e.target.value.toUpperCase(),
-              })
-            }
-          />
-          <input
-            type="text"
-            placeholder="OWNER NAME"
-            className="auth-input"
-            value={newAffiliate.owner}
-            onChange={(e) =>
-              setNewAffiliate({ ...newAffiliate, owner: e.target.value })
-            }
-          />
-          <button onClick={createAffiliate} className="btn btn-success">
-            + CREATE
-          </button>
-        </div>
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>CODE</th>
-                <th>OWNER</th>
-                <th>USES</th>
-                <th>STATUS</th>
-                <th>ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {adminData.affiliates.map((aff) => (
-                <tr key={aff.id}>
-                  <td style={{ fontWeight: "bold", color: "#fff" }}>
-                    {aff.code}
-                  </td>
-                  <td>{aff.owner}</td>
-                  <td>{aff.uses}</td>
-                  <td>
-                    <span
-                      className={`status-badge ${
-                        aff.is_active ? "status-active" : "status-inactive"
-                      }`}
-                    >
-                      {aff.is_active ? "ACTIVE" : "INACTIVE"}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className={`toggle-btn ${
-                        aff.is_active ? "active" : "inactive"
-                      }`}
-                      onClick={() => toggleAffiliate(aff.id, aff.is_active)}
-                    >
-                      {aff.is_active ? "DEACTIVATE" : "ACTIVATE"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     );
@@ -1519,6 +1571,35 @@ function App() {
                     style={{ marginBottom: "15px", textAlign: "center" }}
                   />
 
+                  {/* COUPON INPUT */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "5px",
+                      marginBottom: "15px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Have a Coupon?"
+                      className="auth-input"
+                      style={{
+                        flex: 1,
+                        marginBottom: 0,
+                        textTransform: "uppercase",
+                      }}
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                    />
+                    <button
+                      onClick={handleCheckCoupon}
+                      className="btn btn-secondary btn-sm"
+                      style={{ width: "auto", padding: "0 15px" }}
+                    >
+                      APPLY
+                    </button>
+                  </div>
+
                   {existingTicketCode ? (
                     <div
                       style={{
@@ -1549,11 +1630,17 @@ function App() {
                     <button
                       onClick={handlePreCheckPurchase}
                       disabled={isProcessing}
-                      className="btn btn-primary"
+                      className={
+                        calculateFinalPrice() === 0
+                          ? "btn btn-success"
+                          : "btn btn-primary"
+                      }
                     >
                       {isProcessing
                         ? "PROCESSING..."
-                        : `PAY KES ${selectedMovie?.price}`}
+                        : calculateFinalPrice() === 0
+                        ? "GET TICKET (FREE)"
+                        : `PAY KES ${calculateFinalPrice()}`}
                     </button>
                   )}
                 </div>
