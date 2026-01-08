@@ -120,13 +120,17 @@ function App() {
   const [adminData, setAdminData] = useState(null);
   const [newAffiliate, setNewAffiliate] = useState({ code: "", owner: "" });
 
+  // PAGINATION STATE
+  const [salesPage, setSalesPage] = useState(1);
+  const [ratingsPage, setRatingsPage] = useState(1);
+  const ROWS_PER_PAGE = 10;
+
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
   // --- SPLASH SCREEN & PRELOADER ---
   useEffect(() => {
-    // Check for Admin Secret URL
     const params = new URLSearchParams(window.location.search);
     if (params.get("mode") === "admin") {
       setView("admin-login");
@@ -234,7 +238,6 @@ function App() {
     if (!window.PaystackPop)
       return showFeedback("error", "Payment system loading...");
 
-    // CUSTOM REFERENCE: BW_ + Timestamp
     const uniqueRef = "BW_" + new Date().getTime().toString();
 
     const handler = window.PaystackPop.setup({
@@ -355,11 +358,14 @@ function App() {
 
   const handleThumbClick = async (type) => {
     setUserRating(type);
+    const myTicket = accessCodes[selectedMovie.name] || null;
+
     try {
       await axios.post(`${API_BASE}/rate-movie`, {
         movieName: selectedMovie.name,
         rating: type,
         comment: "",
+        ticketCode: myTicket, // Sending code to lookup email
       });
       fetchRatings(selectedMovie.name);
     } catch (err) {
@@ -370,11 +376,14 @@ function App() {
   const handleSubmitComment = async () => {
     if (!userComment) return;
     setIsProcessing(true);
+    const myTicket = accessCodes[selectedMovie.name] || null;
+
     try {
       await axios.post(`${API_BASE}/rate-movie`, {
         movieName: selectedMovie.name,
         rating: "none",
         comment: userComment,
+        ticketCode: myTicket, // Sending code to lookup email
       });
       showFeedback("success", "Comment sent!");
       setUserComment("");
@@ -459,6 +468,12 @@ function App() {
     );
   }
 
+  // --- ADMIN PAGINATION HELPERS ---
+  const paginate = (data, page) => {
+    const start = (page - 1) * ROWS_PER_PAGE;
+    return data.slice(start, start + ROWS_PER_PAGE);
+  };
+
   // --- ADMIN VIEWS ---
   if (view === "admin-login") {
     return (
@@ -493,6 +508,9 @@ function App() {
   }
 
   if (view === "admin-dashboard" && adminData) {
+    const paginatedSales = paginate(adminData.recent, salesPage);
+    const paginatedRatings = paginate(adminData.ratings, ratingsPage);
+
     return (
       <div className="admin-dashboard">
         <div className="dashboard-header">
@@ -527,6 +545,134 @@ function App() {
           </div>
         </div>
 
+        <h3 className="section-title">RECENT SALES</h3>
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>DATE</th>
+                <th>EMAIL</th>
+                <th>CODE</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedSales.map((t) => {
+                const isExpired = new Date() > new Date(t.expiry_date);
+                return (
+                  <tr key={t.id}>
+                    <td>{new Date(t.created_at).toLocaleDateString()}</td>
+                    <td>{t.email}</td>
+                    <td
+                      style={{
+                        fontFamily: "monospace",
+                        color: "var(--accent-color)",
+                      }}
+                    >
+                      {t.code}
+                    </td>
+                    <td>
+                      <span
+                        className={`status-badge ${
+                          isExpired ? "status-inactive" : "status-active"
+                        }`}
+                      >
+                        {isExpired ? "EXPIRED" : "ACTIVE"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "10px",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={salesPage === 1}
+              onClick={() => setSalesPage((p) => p - 1)}
+            >
+              PREV
+            </button>
+            <span style={{ color: "#666", alignSelf: "center" }}>
+              Page {salesPage}
+            </span>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={salesPage * ROWS_PER_PAGE >= adminData.recent.length}
+              onClick={() => setSalesPage((p) => p + 1)}
+            >
+              NEXT
+            </button>
+          </div>
+        </div>
+
+        <h3 className="section-title">FEEDBACK & RATINGS</h3>
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>DATE</th>
+                <th>EMAIL</th>
+                <th>RATING</th>
+                <th>COMMENT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedRatings.map((r, i) => (
+                <tr key={i}>
+                  <td>{new Date(r.created_at).toLocaleDateString()}</td>
+                  <td style={{ fontSize: "12px", color: "#aaa" }}>
+                    {r.email || "Anonymous"}
+                  </td>
+                  <td>
+                    {r.rating === "up"
+                      ? "👍"
+                      : r.rating === "down"
+                      ? "👎"
+                      : "-"}
+                  </td>
+                  <td style={{ fontStyle: "italic" }}>
+                    {r.comment || "No comment"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "10px",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={ratingsPage === 1}
+              onClick={() => setRatingsPage((p) => p - 1)}
+            >
+              PREV
+            </button>
+            <span style={{ color: "#666", alignSelf: "center" }}>
+              Page {ratingsPage}
+            </span>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={ratingsPage * ROWS_PER_PAGE >= adminData.ratings.length}
+              onClick={() => setRatingsPage((p) => p + 1)}
+            >
+              NEXT
+            </button>
+          </div>
+        </div>
+
         <h3 className="section-title">AFFILIATE CODES</h3>
         <div className="admin-input-group">
           <input
@@ -554,7 +700,6 @@ function App() {
             + CREATE
           </button>
         </div>
-
         <div className="admin-table-wrapper">
           <table className="admin-table">
             <thead>
@@ -592,67 +737,6 @@ function App() {
                     >
                       {aff.is_active ? "DEACTIVATE" : "ACTIVATE"}
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h3 className="section-title">RECENT SALES</h3>
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>DATE</th>
-                <th>EMAIL</th>
-                <th>CODE</th>
-                <th>MOVIE</th>
-              </tr>
-            </thead>
-            <tbody>
-              {adminData.recent.map((t) => (
-                <tr key={t.id}>
-                  <td>{new Date(t.created_at).toLocaleDateString()}</td>
-                  <td>{t.email}</td>
-                  <td
-                    style={{
-                      fontFamily: "monospace",
-                      color: "var(--accent-color)",
-                    }}
-                  >
-                    {t.code}
-                  </td>
-                  <td>{t.movie_name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h3 className="section-title">FEEDBACK & RATINGS</h3>
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>DATE</th>
-                <th>RATING</th>
-                <th>COMMENT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {adminData.ratings.map((r, i) => (
-                <tr key={i}>
-                  <td>{new Date(r.created_at).toLocaleDateString()}</td>
-                  <td>
-                    {r.rating === "up"
-                      ? "👍"
-                      : r.rating === "down"
-                      ? "👎"
-                      : "-"}
-                  </td>
-                  <td style={{ fontStyle: "italic" }}>
-                    {r.comment || "No comment"}
                   </td>
                 </tr>
               ))}

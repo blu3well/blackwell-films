@@ -6,29 +6,24 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5555;
-const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || "Blackwell2026"; // Fallback if not set
+const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || "Blackwell2026";
 
 app.use(cors());
 app.use(express.json());
 
-// Helper: Generate Code
 const generateCode = () => {
   return "BW-" + Math.random().toString(36).substr(2, 6).toUpperCase();
 };
 
 // --- ROUTES ---
 
-// 1. PURCHASE & GENERATE TICKET
+// 1. PURCHASE
 app.post("/api/purchase-guest", async (req, res) => {
   const { email, reference, movieName } = req.body;
-  console.log(`[Purchase Request] Ref: ${reference}, Email: ${email}`);
-
   if (!reference || !email) {
     return res.status(400).json({ success: false, message: "Missing details" });
   }
-
   try {
-    // A. Verify Payment with Paystack
     try {
       const paystackUrl = `https://api.paystack.co/transaction/verify/${reference}`;
       await axios.get(paystackUrl, {
@@ -36,20 +31,15 @@ app.post("/api/purchase-guest", async (req, res) => {
         timeout: 10000,
       });
     } catch (paystackError) {
-      console.error("Paystack Verification Error:", paystackError.message);
-      return res.status(400).json({
-        success: false,
-        message: "Payment verification failed. Please contact support.",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Payment verification failed." });
     }
 
-    // B. Generate Code
     const code = generateCode();
-    // Expiry: 90 days from now
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 90);
 
-    // C. Save to DB
     const newTicket = await pool.query(
       "INSERT INTO tickets (email, code, movie_name, expiry_date) VALUES ($1, $2, $3, $4) RETURNING *",
       [email, code, movieName, expiryDate]
@@ -57,55 +47,41 @@ app.post("/api/purchase-guest", async (req, res) => {
 
     res.json({ success: true, code: newTicket.rows[0].code });
   } catch (err) {
-    console.error("Server Error:", err.message);
     if (err.code === "23505") {
-      // Unique violation (if you enforced unique emails)
-      return res.json({
-        success: false,
-        message: "Ticket already exists for this email.",
-      });
+      return res.json({ success: false, message: "Ticket already exists." });
     }
-    res.status(500).json({
-      success: false,
-      message: "Server encountered an error processing ticket.",
-    });
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 });
 
-// 2. CHECK TICKET STATUS (New Endpoint for Pre-Check)
+// 2. CHECK STATUS
 app.post("/api/check-ticket-status", async (req, res) => {
   const { email, movieName } = req.body;
-
   try {
-    // Find a ticket that matches email/movie AND is NOT expired
     const ticket = await pool.query(
       "SELECT * FROM tickets WHERE email = $1 AND movie_name = $2 AND expiry_date > NOW()",
       [email, movieName]
     );
-
     if (ticket.rows.length > 0) {
-      // Ticket exists and is valid
       return res.json({
         exists: true,
-        code: ticket.rows[0].code, // Send code back so frontend can email it
+        code: ticket.rows[0].code,
         message: "Active ticket found.",
       });
     } else {
       return res.json({ exists: false });
     }
   } catch (err) {
-    console.error("Check Status Error:", err);
     res.status(500).json({ error: "Database error" });
   }
 });
 
-// 3. VERIFY TICKET (Updated to include Affiliate Codes)
+// 3. VERIFY
 app.post("/api/verify-ticket", async (req, res) => {
   const { code, movieName } = req.body;
   const userIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
   try {
-    // STEP A: Check Standard Tickets
     const ticket = await pool.query(
       "SELECT * FROM tickets WHERE code = $1 AND movie_name = $2",
       [code, movieName]
@@ -113,23 +89,18 @@ app.post("/api/verify-ticket", async (req, res) => {
 
     if (ticket.rows.length > 0) {
       const data = ticket.rows[0];
-
-      // Check Expiry
       if (new Date() > new Date(data.expiry_date)) {
-        return res.status(403).json({
-          valid: false,
-          message: "Access Denied: Your ticket has expired.",
-        });
+        return res
+          .status(403)
+          .json({ valid: false, message: "Ticket Expired." });
       }
 
-      // Check Device Limit
       let currentDevices = data.device_ips || [];
       if (!currentDevices.includes(userIp)) {
         if (currentDevices.length >= 3) {
-          return res.status(403).json({
-            valid: false,
-            message: "Device limit reached (Max 3 unique devices).",
-          });
+          return res
+            .status(403)
+            .json({ valid: false, message: "Device limit reached." });
         }
         await pool.query(
           "UPDATE tickets SET device_ips = array_append(device_ips, $1) WHERE id = $2",
@@ -139,51 +110,51 @@ app.post("/api/verify-ticket", async (req, res) => {
       return res.json({ valid: true, message: "Access Granted" });
     }
 
-    // STEP B: Check Affiliate/Master Codes (If not found in standard tickets)
     const affiliate = await pool.query(
       "SELECT * FROM affiliate_codes WHERE code = $1",
       [code]
     );
-
     if (affiliate.rows.length > 0) {
-      const affiliateData = affiliate.rows[0];
+      const affData = affiliate.rows[0];
+      if (!affData.is_active)
+        return res
+          .status(403)
+          .json({ valid: false, message: "Code Deactivated." });
 
-      if (!affiliateData.is_active) {
-        return res.status(403).json({
-          valid: false,
-          message: "This code has been deactivated.",
-        });
-      }
-
-      // Increment Usage Count
       await pool.query(
         "UPDATE affiliate_codes SET uses = uses + 1 WHERE id = $1",
-        [affiliateData.id]
+        [affData.id]
       );
-
       return res.json({ valid: true, message: "VIP Access Granted" });
     }
 
-    // If neither found:
-    return res.status(404).json({
-      valid: false,
-      message: "Invalid Code. Please check and try again.",
-    });
+    return res.status(404).json({ valid: false, message: "Invalid Code." });
   } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ message: "Verification failed due to server error." });
+    res.status(500).json({ message: "Server error." });
   }
 });
 
-// 4. RATE MOVIE
+// 4. RATE MOVIE (UPDATED: Handles Email Lookup)
 app.post("/api/rate-movie", async (req, res) => {
-  const { movieName, rating, comment } = req.body;
+  const { movieName, rating, comment, ticketCode } = req.body;
+
+  let userEmail = "Anonymous";
+
   try {
+    // Attempt to find email if ticketCode is provided
+    if (ticketCode) {
+      const ticketRes = await pool.query(
+        "SELECT email FROM tickets WHERE code = $1",
+        [ticketCode]
+      );
+      if (ticketRes.rows.length > 0) {
+        userEmail = ticketRes.rows[0].email;
+      }
+    }
+
     await pool.query(
-      "INSERT INTO movie_ratings (movie_name, rating, comment) VALUES ($1, $2, $3)",
-      [movieName, rating, comment]
+      "INSERT INTO movie_ratings (movie_name, rating, comment, email) VALUES ($1, $2, $3, $4)",
+      [movieName, rating, comment, userEmail]
     );
     res.json({ success: true });
   } catch (err) {
@@ -196,111 +167,85 @@ app.post("/api/rate-movie", async (req, res) => {
 app.get("/api/ratings/:movieName", async (req, res) => {
   const { movieName } = req.params;
   try {
-    const upCount = await pool.query(
+    const up = await pool.query(
       "SELECT COUNT(*) FROM movie_ratings WHERE movie_name = $1 AND rating = 'up'",
       [movieName]
     );
-    const downCount = await pool.query(
+    const down = await pool.query(
       "SELECT COUNT(*) FROM movie_ratings WHERE movie_name = $1 AND rating = 'down'",
       [movieName]
     );
-
     res.json({
-      up: parseInt(upCount.rows[0].count) || 0,
-      down: parseInt(downCount.rows[0].count) || 0,
+      up: parseInt(up.rows[0].count) || 0,
+      down: parseInt(down.rows[0].count) || 0,
     });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
 
-// --- ADMIN DASHBOARD ROUTES ---
-
-// Middleware to check Admin PIN
+// --- ADMIN ---
 const verifyAdmin = (req, res, next) => {
-  const pin = req.headers["x-admin-pin"];
-  if (pin !== ADMIN_SECRET) {
+  if (req.headers["x-admin-pin"] !== ADMIN_SECRET)
     return res.status(403).json({ error: "Unauthorized" });
-  }
   next();
 };
 
 app.post("/api/admin/login", (req, res) => {
-  const { pin } = req.body;
-  if (pin === ADMIN_SECRET) {
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ success: false, message: "Invalid PIN" });
-  }
+  if (req.body.pin === ADMIN_SECRET) res.json({ success: true });
+  else res.status(401).json({ success: false });
 });
 
 app.get("/api/admin/dashboard", verifyAdmin, async (req, res) => {
   try {
-    // 1. Total Sales (Count of tickets)
     const tickets = await pool.query("SELECT COUNT(*) FROM tickets");
     const totalTickets = parseInt(tickets.rows[0].count) || 0;
-    const revenue = totalTickets * 250; // Hardcoded price multiplier
 
-    // 2. Recent Transactions (Last 50)
+    // Fetch MORE records (limit 1000) so frontend pagination can handle them
     const recent = await pool.query(
-      "SELECT * FROM tickets ORDER BY id DESC LIMIT 50"
+      "SELECT * FROM tickets ORDER BY id DESC LIMIT 1000"
     );
-
-    // 3. Ratings & Comments
     const ratings = await pool.query(
-      "SELECT * FROM movie_ratings ORDER BY created_at DESC"
+      "SELECT * FROM movie_ratings ORDER BY created_at DESC LIMIT 1000"
     );
-
-    // 4. Affiliate Codes
     const affiliates = await pool.query(
       "SELECT * FROM affiliate_codes ORDER BY created_at DESC"
     );
 
     res.json({
-      revenue,
+      revenue: totalTickets * 250,
       totalTickets,
       recent: recent.rows,
       ratings: ratings.rows,
       affiliates: affiliates.rows,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Admin data fetch failed" });
+    res.status(500).json({ error: "Admin fetch failed" });
   }
 });
 
-// Create Affiliate Code
 app.post("/api/admin/affiliate", verifyAdmin, async (req, res) => {
-  const { code, owner } = req.body;
   try {
     const newCode = await pool.query(
       "INSERT INTO affiliate_codes (code, owner) VALUES ($1, $2) RETURNING *",
-      [code.toUpperCase(), owner]
+      [req.body.code, req.body.owner]
     );
     res.json({ success: true, data: newCode.rows[0] });
   } catch (err) {
-    res
-      .status(500)
-      .json({ error: "Failed to create code. Code might already exist." });
+    res.status(500).json({ error: "Failed" });
   }
 });
 
-// Toggle Affiliate Code Status
 app.patch("/api/admin/affiliate/:id", verifyAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { is_active } = req.body;
   try {
     await pool.query(
       "UPDATE affiliate_codes SET is_active = $1 WHERE id = $2",
-      [is_active, id]
+      [req.body.is_active, req.params.id]
     );
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Update failed" });
+    res.status(500).json({ error: "Failed" });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
