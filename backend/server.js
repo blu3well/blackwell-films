@@ -6,6 +6,7 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5555;
+const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || "Blackwell2026"; // Fallback if not set
 
 app.use(cors());
 app.use(express.json());
@@ -98,54 +99,76 @@ app.post("/api/check-ticket-status", async (req, res) => {
   }
 });
 
-// 3. VERIFY TICKET & DEVICE LIMIT
+// 3. VERIFY TICKET (Updated to include Affiliate Codes)
 app.post("/api/verify-ticket", async (req, res) => {
   const { code, movieName } = req.body;
   const userIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
   try {
+    // STEP A: Check Standard Tickets
     const ticket = await pool.query(
       "SELECT * FROM tickets WHERE code = $1 AND movie_name = $2",
       [code, movieName]
     );
 
-    if (ticket.rows.length === 0) {
-      return res
-        .status(404)
-        .json({
-          valid: false,
-          message: "Invalid Code. Please check and try again.",
-        });
-    }
+    if (ticket.rows.length > 0) {
+      const data = ticket.rows[0];
 
-    const data = ticket.rows[0];
-
-    if (new Date() > new Date(data.expiry_date)) {
-      return res
-        .status(403)
-        .json({
+      // Check Expiry
+      if (new Date() > new Date(data.expiry_date)) {
+        return res.status(403).json({
           valid: false,
           message: "Access Denied: Your ticket has expired.",
         });
-    }
+      }
 
-    let currentDevices = data.device_ips || [];
-    if (!currentDevices.includes(userIp)) {
-      if (currentDevices.length >= 3) {
-        return res
-          .status(403)
-          .json({
+      // Check Device Limit
+      let currentDevices = data.device_ips || [];
+      if (!currentDevices.includes(userIp)) {
+        if (currentDevices.length >= 3) {
+          return res.status(403).json({
             valid: false,
             message: "Device limit reached (Max 3 unique devices).",
           });
+        }
+        await pool.query(
+          "UPDATE tickets SET device_ips = array_append(device_ips, $1) WHERE id = $2",
+          [userIp, data.id]
+        );
       }
-      await pool.query(
-        "UPDATE tickets SET device_ips = array_append(device_ips, $1) WHERE id = $2",
-        [userIp, data.id]
-      );
+      return res.json({ valid: true, message: "Access Granted" });
     }
 
-    res.json({ valid: true, message: "Access Granted" });
+    // STEP B: Check Affiliate/Master Codes (If not found in standard tickets)
+    const affiliate = await pool.query(
+      "SELECT * FROM affiliate_codes WHERE code = $1",
+      [code]
+    );
+
+    if (affiliate.rows.length > 0) {
+      const affiliateData = affiliate.rows[0];
+
+      if (!affiliateData.is_active) {
+        return res.status(403).json({
+          valid: false,
+          message: "This code has been deactivated.",
+        });
+      }
+
+      // Increment Usage Count
+      await pool.query(
+        "UPDATE affiliate_codes SET uses = uses + 1 WHERE id = $1",
+        [affiliateData.id]
+      );
+
+      return res.json({ valid: true, message: "VIP Access Granted" });
+    }
+
+    // If neither found:
+    return res.status(404).json({
+      valid: false,
+      message: "Invalid Code. Please check and try again.",
+    });
   } catch (error) {
     console.error(error);
     res
@@ -169,7 +192,7 @@ app.post("/api/rate-movie", async (req, res) => {
   }
 });
 
-// 5. GET RATING STATS (New Endpoint)
+// 5. GET RATING STATS
 app.get("/api/ratings/:movieName", async (req, res) => {
   const { movieName } = req.params;
   try {
@@ -189,6 +212,92 @@ app.get("/api/ratings/:movieName", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch stats" });
+  }
+});
+
+// --- ADMIN DASHBOARD ROUTES ---
+
+// Middleware to check Admin PIN
+const verifyAdmin = (req, res, next) => {
+  const pin = req.headers["x-admin-pin"];
+  if (pin !== ADMIN_SECRET) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+  next();
+};
+
+app.post("/api/admin/login", (req, res) => {
+  const { pin } = req.body;
+  if (pin === ADMIN_SECRET) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, message: "Invalid PIN" });
+  }
+});
+
+app.get("/api/admin/dashboard", verifyAdmin, async (req, res) => {
+  try {
+    // 1. Total Sales (Count of tickets)
+    const tickets = await pool.query("SELECT COUNT(*) FROM tickets");
+    const totalTickets = parseInt(tickets.rows[0].count) || 0;
+    const revenue = totalTickets * 250; // Hardcoded price multiplier
+
+    // 2. Recent Transactions (Last 50)
+    const recent = await pool.query(
+      "SELECT * FROM tickets ORDER BY id DESC LIMIT 50"
+    );
+
+    // 3. Ratings & Comments
+    const ratings = await pool.query(
+      "SELECT * FROM movie_ratings ORDER BY created_at DESC"
+    );
+
+    // 4. Affiliate Codes
+    const affiliates = await pool.query(
+      "SELECT * FROM affiliate_codes ORDER BY created_at DESC"
+    );
+
+    res.json({
+      revenue,
+      totalTickets,
+      recent: recent.rows,
+      ratings: ratings.rows,
+      affiliates: affiliates.rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Admin data fetch failed" });
+  }
+});
+
+// Create Affiliate Code
+app.post("/api/admin/affiliate", verifyAdmin, async (req, res) => {
+  const { code, owner } = req.body;
+  try {
+    const newCode = await pool.query(
+      "INSERT INTO affiliate_codes (code, owner) VALUES ($1, $2) RETURNING *",
+      [code.toUpperCase(), owner]
+    );
+    res.json({ success: true, data: newCode.rows[0] });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Failed to create code. Code might already exist." });
+  }
+});
+
+// Toggle Affiliate Code Status
+app.patch("/api/admin/affiliate/:id", verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { is_active } = req.body;
+  try {
+    await pool.query(
+      "UPDATE affiliate_codes SET is_active = $1 WHERE id = $2",
+      [is_active, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Update failed" });
   }
 });
 
