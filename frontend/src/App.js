@@ -43,7 +43,6 @@ const MOVIE_DATA = [
   },
 ];
 
-// UPDATED: Hero Images (WebP)
 const HERO_IMAGES = [
   "/beth&jackso.webp",
   "/kip.webp",
@@ -113,21 +112,18 @@ function App() {
 
   const [existingTicketCode, setExistingTicketCode] = useState(null);
 
-  // COUPON STATE
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code: "ABC", discount: 50 }
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
 
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState("");
   const [ratingCounts, setRatingCounts] = useState({ up: 0, down: 0 });
 
-  // --- ADMIN STATE ---
   const [adminPin, setAdminPin] = useState("");
   const [adminData, setAdminData] = useState(null);
   const [newCoupon, setNewCoupon] = useState({ code: "", discount: 0 });
 
-  // PAGINATION STATE
   const [salesPage, setSalesPage] = useState(1);
   const [ratingsPage, setRatingsPage] = useState(1);
   const ROWS_PER_PAGE = 10;
@@ -136,7 +132,6 @@ function App() {
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5555/api";
 
-  // --- SPLASH SCREEN & PRELOADER ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("mode") === "admin") {
@@ -161,7 +156,6 @@ function App() {
     setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
 
-  // Slideshow
   useEffect(() => {
     if (!loading && view === "home") {
       const interval = setInterval(() => {
@@ -200,7 +194,6 @@ function App() {
     if (hasAccess(movie.name)) {
       setIsPlaying(true);
     } else {
-      // Reset Modal State
       setShowGatekeeper(true);
       setGatekeeperMode("buy");
       setExistingTicketCode(null);
@@ -221,7 +214,6 @@ function App() {
     setView(previousView);
   };
 
-  // --- COUPON LOGIC (FIXED & CASE INSENSITIVE) ---
   const handleCheckCoupon = async () => {
     if (!couponInput) {
       showFeedback("error", "Please enter a coupon code.");
@@ -270,10 +262,8 @@ function App() {
       } else {
         const finalPrice = calculateFinalPrice();
         if (finalPrice === 0) {
-          // FREE TICKET FLOW
           processPurchase("FREE_COUPON");
         } else {
-          // PAID FLOW
           handlePaystack(finalPrice);
         }
       }
@@ -294,7 +284,7 @@ function App() {
     const handler = window.PaystackPop.setup({
       key: "pk_live_36e3a37b7428b85df3f32582e043ffb49e0e1ed3",
       email: email,
-      amount: amountToPay * 100, // KES to Cents
+      amount: amountToPay * 100,
       currency: "KES",
       ref: uniqueRef,
       callback: (response) => processPurchase(response.reference),
@@ -455,7 +445,6 @@ function App() {
     localStorage.setItem("blackwell_tickets", JSON.stringify(newTickets));
   };
 
-  // --- ADMIN FUNCTIONS ---
   const handleAdminLogin = async (e) => {
     e.preventDefault();
     try {
@@ -487,7 +476,6 @@ function App() {
     try {
       await axios.post(
         `${API_BASE}/admin/coupon`,
-        // Mapping discount to discount_percent to match server
         { code: newCoupon.code, discount_percent: newCoupon.discount },
         { headers: { "x-admin-pin": adminPin } }
       );
@@ -532,19 +520,16 @@ function App() {
   if (loading) {
     return (
       <div className="splash-screen">
-        {/* UPDATED: Splash Logo to logo15.png */}
         <img src="/logo15.png" alt="Loading..." className="splash-logo" />
       </div>
     );
   }
 
-  // --- ADMIN PAGINATION HELPERS ---
   const paginate = (data, page) => {
     const start = (page - 1) * ROWS_PER_PAGE;
     return data.slice(start, start + ROWS_PER_PAGE);
   };
 
-  // --- ADMIN VIEWS ---
   if (view === "admin-login") {
     return (
       <div className="admin-login-container">
@@ -623,7 +608,6 @@ function App() {
             placeholder="COUPON NAME (e.g. DAVID)"
             className="auth-input"
             value={newCoupon.code}
-            // Force uppercase on input
             onChange={(e) =>
               setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })
             }
@@ -835,7 +819,6 @@ function App() {
     );
   }
 
-  // --- NORMAL APP RENDER ---
   return (
     <div className="app-container">
       {status.message && (
@@ -848,7 +831,6 @@ function App() {
         </div>
       )}
 
-      {/* --- NAV --- */}
       <nav className="nav-bar">
         <div className="nav-left">
           <img
@@ -911,10 +893,9 @@ function App() {
         </div>
       </nav>
 
-      {/* --- CONTENT --- */}
       <div className="main-content">
         {searchQuery ? (
-          <div className="centered-container">
+          <div className="centered-container fade-in-view">
             <h2 style={{ marginBottom: "30px", fontWeight: "300" }}>RESULTS</h2>
             {filteredResults.map((item) => (
               <div
@@ -940,7 +921,8 @@ function App() {
             ))}
           </div>
         ) : (
-          <>
+          /* key={view} triggers the CSS fade-in every time view state changes */
+          <div key={view} className="fade-in-view">
             {view === "home" && (
               <div>
                 <div className="hero-wrapper">
@@ -1480,7 +1462,7 @@ function App() {
                 </h1>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -1607,7 +1589,6 @@ function App() {
                     style={{ marginBottom: "15px", textAlign: "center" }}
                   />
 
-                  {/* COUPON INPUT */}
                   <div
                     style={{
                       display: "flex",
