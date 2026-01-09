@@ -940,7 +940,8 @@ function App() {
             ))}
           </div>
         ) : (
-          <>
+          /* --- WRAPPER FOR PAGE TRANSITIONS --- */
+          <div key={view} className="fade-enter">
             {view === "home" && (
               <div>
                 <div className="hero-wrapper">
@@ -1480,7 +1481,7 @@ function App() {
                 </h1>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -1565,7 +1566,7 @@ function App() {
                 textAlign: "center",
                 color: "var(--accent-color)",
                 marginBottom: "30px",
-                fontFamily: "Playfair Display, serif",
+                fontFamily: "Montserrat, sans-serif", // UPDATED: Changed from Playfair Display to Montserrat
               }}
             >
               {selectedMovie?.name.toUpperCase()}
