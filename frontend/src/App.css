@@ -824,7 +824,7 @@ html {
   }
 }
 
-/* --- ANIMATION --- */
+/* --- ANIMATION (ADDED) --- */
 @keyframes fadeIn {
   from {
     opacity: 0;

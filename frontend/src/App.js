@@ -43,7 +43,7 @@ const MOVIE_DATA = [
   },
 ];
 
-// WebP Hero Images
+// UPDATED: Hero Images (WebP)
 const HERO_IMAGES = [
   "/beth&jackso.webp",
   "/kip.webp",
@@ -200,6 +200,7 @@ function App() {
     if (hasAccess(movie.name)) {
       setIsPlaying(true);
     } else {
+      // Reset Modal State
       setShowGatekeeper(true);
       setGatekeeperMode("buy");
       setExistingTicketCode(null);
@@ -269,8 +270,10 @@ function App() {
       } else {
         const finalPrice = calculateFinalPrice();
         if (finalPrice === 0) {
+          // FREE TICKET FLOW
           processPurchase("FREE_COUPON");
         } else {
+          // PAID FLOW
           handlePaystack(finalPrice);
         }
       }
@@ -484,6 +487,7 @@ function App() {
     try {
       await axios.post(
         `${API_BASE}/admin/coupon`,
+        // Mapping discount to discount_percent to match server
         { code: newCoupon.code, discount_percent: newCoupon.discount },
         { headers: { "x-admin-pin": adminPin } }
       );
@@ -528,7 +532,7 @@ function App() {
   if (loading) {
     return (
       <div className="splash-screen">
-        {/* logo15.png used */}
+        {/* UPDATED: Splash Logo to logo15.png */}
         <img src="/logo15.png" alt="Loading..." className="splash-logo" />
       </div>
     );
@@ -619,6 +623,7 @@ function App() {
             placeholder="COUPON NAME (e.g. DAVID)"
             className="auth-input"
             value={newCoupon.code}
+            // Force uppercase on input
             onChange={(e) =>
               setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })
             }
