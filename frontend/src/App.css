@@ -1006,3 +1006,36 @@ html {
     transform: translateY(0);
   }
 }
+/* --- PAGE TRANSITION ANIMATION --- */
+.fade-in-view {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- MOBILE ALIGNMENT FIX --- */
+@media (max-width: 768px) {
+  /* Center text elements (Runtime, Year, Description) */
+  .detail-grid {
+    text-align: center;
+  }
+
+  /* Center the poster image */
+  .detail-grid .detail-poster {
+    margin: 0 auto;
+  }
+
+  /* Center the Flex Rows (Badges & Buttons) */
+  .detail-flex-row {
+    justify-content: center !important;
+  }
+}

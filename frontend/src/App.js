@@ -921,7 +921,6 @@ function App() {
             ))}
           </div>
         ) : (
-          /* key={view} triggers the CSS fade-in every time view state changes */
           <div key={view} className="fade-in-view">
             {view === "home" && (
               <div>
@@ -1253,7 +1252,10 @@ function App() {
                     >
                       {selectedMovie.name}
                     </h1>
+
+                    {/* ADDED CLASS NAME HERE */}
                     <div
+                      className="detail-flex-row"
                       style={{
                         display: "flex",
                         gap: "10px",
@@ -1333,7 +1335,9 @@ function App() {
                       </div>
                     </div>
 
+                    {/* ADDED CLASS NAME HERE */}
                     <div
+                      className="detail-flex-row"
                       style={{
                         marginTop: "30px",
                         display: "flex",
@@ -1541,7 +1545,6 @@ function App() {
             >
               ✕
             </button>
-
             <h2
               style={{
                 textAlign: "center",
@@ -1552,7 +1555,6 @@ function App() {
             >
               {selectedMovie?.name.toUpperCase()}
             </h2>
-
             <div className="gatekeeper-tabs">
               <button
                 className={`tab-btn ${
@@ -1571,7 +1573,6 @@ function App() {
                 HAVE A CODE?
               </button>
             </div>
-
             <div className="gatekeeper-content">
               {gatekeeperMode === "buy" && (
                 <div style={{ textAlign: "center" }}>
@@ -1588,7 +1589,6 @@ function App() {
                     onChange={(e) => setEmail(e.target.value)}
                     style={{ marginBottom: "15px", textAlign: "center" }}
                   />
-
                   <div
                     style={{
                       display: "flex",
@@ -1618,7 +1618,6 @@ function App() {
                       APPLY
                     </button>
                   </div>
-
                   {existingTicketCode ? (
                     <div
                       style={{
@@ -1664,7 +1663,6 @@ function App() {
                   )}
                 </div>
               )}
-
               {gatekeeperMode === "code" && (
                 <form onSubmit={verifyCode} style={{ textAlign: "center" }}>
                   <p style={{ color: "#ccc", marginBottom: "20px" }}>
