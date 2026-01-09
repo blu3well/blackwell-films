@@ -39,7 +39,7 @@ html {
   box-sizing: border-box;
 }
 
-/* --- ANIMATIONS --- */
+/* --- ANIMATIONS (ONLY NEW ADDITION) --- */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -937,72 +937,4 @@ html {
   background: rgba(46, 204, 113, 0.2);
   color: #2ecc71;
   border: 1px solid #2ecc71;
-}
-
-/* --- MOBILE SPECIFIC FIXES --- */
-@media (max-width: 480px) {
-  /* FIXED: Admin Login on Mobile */
-  .admin-login-container input {
-    font-size: 16px; /* Prevents auto-zoom on iOS */
-  }
-
-  /* FIXED: Modal on Mobile */
-  .auth-card {
-    width: 90% !important;
-    max-width: 380px;
-    padding: 25px 15px;
-  }
-
-  /* FIXED: Hero Slide on Mobile (No Crop) */
-  .hero-wrapper {
-    height: 50vh; /* Reduced height to reduce empty space */
-  }
-
-  .hero-slide {
-    object-fit: contain !important; /* Forces full image width visibility */
-    background-color: #000; /* Letterbox background */
-  }
-
-  .hero-title {
-    font-size: 2rem;
-    margin-top: 10px;
-  }
-
-  .hero-content {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-    align-items: center;
-  }
-
-  /* FIXED: Movie Info Card padding */
-  .home-movie-info {
-    padding: 20px;
-    margin-bottom: 30px;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-    gap: 30px;
-    text-align: center;
-  }
-
-  .detail-poster {
-    height: auto;
-    max-height: 400px;
-    width: 80%;
-    margin: 0 auto;
-  }
-
-  .meta-row {
-    justify-content: center;
-  }
-  .meta-label {
-    min-width: auto;
-    margin-right: 10px;
-  }
-
-  .search-input.open {
-    width: 140px;
-  }
 }
