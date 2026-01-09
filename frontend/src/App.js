@@ -43,7 +43,7 @@ const MOVIE_DATA = [
   },
 ];
 
-// UPDATED: Hero Images (WebP)
+// WebP Hero Images
 const HERO_IMAGES = [
   "/beth&jackso.webp",
   "/kip.webp",
@@ -115,7 +115,7 @@ function App() {
 
   // COUPON STATE
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code: "ABC", discount: 50 }
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
 
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [userRating, setUserRating] = useState(null);
@@ -200,7 +200,6 @@ function App() {
     if (hasAccess(movie.name)) {
       setIsPlaying(true);
     } else {
-      // Reset Modal State
       setShowGatekeeper(true);
       setGatekeeperMode("buy");
       setExistingTicketCode(null);
@@ -221,7 +220,7 @@ function App() {
     setView(previousView);
   };
 
-  // --- COUPON LOGIC (FIXED & CASE INSENSITIVE) ---
+  // --- COUPON LOGIC ---
   const handleCheckCoupon = async () => {
     if (!couponInput) {
       showFeedback("error", "Please enter a coupon code.");
@@ -270,10 +269,8 @@ function App() {
       } else {
         const finalPrice = calculateFinalPrice();
         if (finalPrice === 0) {
-          // FREE TICKET FLOW
           processPurchase("FREE_COUPON");
         } else {
-          // PAID FLOW
           handlePaystack(finalPrice);
         }
       }
@@ -487,7 +484,6 @@ function App() {
     try {
       await axios.post(
         `${API_BASE}/admin/coupon`,
-        // Mapping discount to discount_percent to match server
         { code: newCoupon.code, discount_percent: newCoupon.discount },
         { headers: { "x-admin-pin": adminPin } }
       );
@@ -532,7 +528,7 @@ function App() {
   if (loading) {
     return (
       <div className="splash-screen">
-        {/* UPDATED: Splash Logo to logo15.png */}
+        {/* logo15.png used */}
         <img src="/logo15.png" alt="Loading..." className="splash-logo" />
       </div>
     );
@@ -623,7 +619,6 @@ function App() {
             placeholder="COUPON NAME (e.g. DAVID)"
             className="auth-input"
             value={newCoupon.code}
-            // Force uppercase on input
             onChange={(e) =>
               setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })
             }
@@ -940,7 +935,7 @@ function App() {
             ))}
           </div>
         ) : (
-          /* --- WRAPPER FOR PAGE TRANSITIONS --- */
+          /* --- WRAPPER FOR PAGE TRANSITIONS (ONLY CHANGE IN STRUCTURE) --- */
           <div key={view} className="fade-enter">
             {view === "home" && (
               <div>
@@ -1566,7 +1561,7 @@ function App() {
                 textAlign: "center",
                 color: "var(--accent-color)",
                 marginBottom: "30px",
-                fontFamily: "Montserrat, sans-serif", // UPDATED: Changed from Playfair Display to Montserrat
+                fontFamily: "Montserrat, sans-serif", // FIXED FONT
               }}
             >
               {selectedMovie?.name.toUpperCase()}
