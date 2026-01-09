@@ -115,7 +115,7 @@ function App() {
 
   // COUPON STATE
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code: "ABC", discount: 50 }
 
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [userRating, setUserRating] = useState(null);
@@ -221,7 +221,7 @@ function App() {
     setView(previousView);
   };
 
-  // --- COUPON LOGIC ---
+  // --- COUPON LOGIC (FIXED & CASE INSENSITIVE) ---
   const handleCheckCoupon = async () => {
     if (!couponInput) {
       showFeedback("error", "Please enter a coupon code.");
@@ -940,8 +940,7 @@ function App() {
             ))}
           </div>
         ) : (
-          /* --- WRAPPER FOR PAGE TRANSITIONS (ONLY CHANGE IN STRUCTURE) --- */
-          <div key={view} className="fade-enter">
+          <>
             {view === "home" && (
               <div>
                 <div className="hero-wrapper">
@@ -1481,7 +1480,7 @@ function App() {
                 </h1>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
@@ -1566,7 +1565,7 @@ function App() {
                 textAlign: "center",
                 color: "var(--accent-color)",
                 marginBottom: "30px",
-                fontFamily: "Montserrat, sans-serif", // FIXED FONT
+                fontFamily: "Playfair Display, serif",
               }}
             >
               {selectedMovie?.name.toUpperCase()}
