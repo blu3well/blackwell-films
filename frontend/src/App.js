@@ -43,11 +43,14 @@ const MOVIE_DATA = [
   },
 ];
 
+// UPDATED: Hero Images (WebP)
 const HERO_IMAGES = [
-  "/beth&jackso.jpg",
-  "/kip.jpg",
-  "/ndocha.jpg",
-  "/beth.jpg",
+  "/beth&jackso.webp",
+  "/kip.webp",
+  "/ndocha.webp",
+  "/beth&jackso2.webp",
+  "/beth.webp",
+  "/jackso.webp",
 ];
 
 const LEGAL_TEXT = {
@@ -509,7 +512,6 @@ function App() {
     }
   };
 
-  // NEW: DELETE FUNCTION
   const deleteCoupon = async (id) => {
     if (!window.confirm("Are you sure you want to delete this coupon?")) return;
     try {
@@ -530,7 +532,8 @@ function App() {
   if (loading) {
     return (
       <div className="splash-screen">
-        <img src="/logo13.png" alt="Loading..." className="splash-logo" />
+        {/* UPDATED: Splash Logo to logo15.png */}
+        <img src="/logo15.png" alt="Loading..." className="splash-logo" />
       </div>
     );
   }
@@ -620,7 +623,7 @@ function App() {
             placeholder="COUPON NAME (e.g. DAVID)"
             className="auth-input"
             value={newCoupon.code}
-            // FIXED: Force uppercase on input
+            // Force uppercase on input
             onChange={(e) =>
               setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })
             }
@@ -1622,7 +1625,6 @@ function App() {
                         textTransform: "uppercase",
                       }}
                       value={couponInput}
-                      // FIXED: Force uppercase input
                       onChange={(e) =>
                         setCouponInput(e.target.value.toUpperCase())
                       }
