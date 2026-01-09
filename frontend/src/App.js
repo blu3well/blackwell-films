@@ -940,9 +940,10 @@ function App() {
             ))}
           </div>
         ) : (
+          /* --- DIRECTLY APPLYING TRANSITION CLASS TO EXISTING ROOTS --- */
           <>
             {view === "home" && (
-              <div>
+              <div key="home" className="fade-enter">
                 <div className="hero-wrapper">
                   <div
                     className="play-overlay-btn"
@@ -1191,7 +1192,7 @@ function App() {
             )}
 
             {view === "movies" && (
-              <div className="centered-container-lg">
+              <div key="movies" className="centered-container-lg fade-enter">
                 <h1
                   style={{
                     textAlign: "center",
@@ -1241,7 +1242,8 @@ function App() {
 
             {view === "movie-details" && selectedMovie && (
               <div
-                className="centered-container-lg"
+                key="movie-details"
+                className="centered-container-lg fade-enter"
                 style={{ marginTop: "40px" }}
               >
                 <button
@@ -1464,7 +1466,8 @@ function App() {
 
             {view === "shows" && (
               <div
-                className="centered-container-lg"
+                key="shows"
+                className="centered-container-lg fade-enter"
                 style={{ textAlign: "center", padding: "100px 0" }}
               >
                 <h1
@@ -1565,7 +1568,7 @@ function App() {
                 textAlign: "center",
                 color: "var(--accent-color)",
                 marginBottom: "30px",
-                fontFamily: "Playfair Display, serif",
+                fontFamily: "Montserrat, sans-serif", // FIXED FONT
               }}
             >
               {selectedMovie?.name.toUpperCase()}
