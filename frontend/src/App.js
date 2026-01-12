@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import axios from "axios";
 import emailjs from "@emailjs/browser";
 import "./App.css";
@@ -41,15 +47,6 @@ const MOVIE_DATA = [
     isFeatured: true,
     type: "movie",
   },
-];
-
-const HERO_IMAGES = [
-  "/beth&jackso.webp",
-  "/kip.webp",
-  "/ndocha.webp",
-  "/beth&jackso2.webp",
-  "/beth.webp",
-  "/jackso.webp",
 ];
 
 const LEGAL_TEXT = {
@@ -115,7 +112,6 @@ function App() {
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
 
-  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState("");
   const [ratingCounts, setRatingCounts] = useState({ up: 0, down: 0 });
@@ -127,6 +123,10 @@ function App() {
   const [salesPage, setSalesPage] = useState(1);
   const [ratingsPage, setRatingsPage] = useState(1);
   const ROWS_PER_PAGE = 10;
+
+  // MUTE STATE
+  const [isMuted, setIsMuted] = useState(true);
+  const vimeoRef = useRef(null);
 
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
@@ -140,30 +140,33 @@ function App() {
       return;
     }
 
-    HERO_IMAGES.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
-
     const timer = setTimeout(() => {
       setLoading(false);
     }, 3000);
     return () => clearTimeout(timer);
   }, []);
 
+  const changeView = (newView) => {
+    setView(newView);
+    setSearchQuery("");
+    window.scrollTo(0, 0);
+  };
+
+  const toggleMute = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    if (vimeoRef.current && vimeoRef.current.contentWindow) {
+      vimeoRef.current.contentWindow.postMessage(
+        JSON.stringify({ method: "setVolume", value: nextMuted ? 0 : 1 }),
+        "*"
+      );
+    }
+  };
+
   const showFeedback = (type, msg) => {
     setStatus({ type, message: msg });
     setTimeout(() => setStatus({ type: "", message: "" }), 8000);
   };
-
-  useEffect(() => {
-    if (!loading && view === "home") {
-      const interval = setInterval(() => {
-        setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [loading, view]);
 
   const fetchRatings = useCallback(
     async (movieName) => {
@@ -207,6 +210,7 @@ function App() {
     setPreviousView(view);
     setSelectedMovie(movie);
     setView("movie-details");
+    setSearchQuery("");
     window.scrollTo(0, 0);
   };
 
@@ -402,9 +406,13 @@ function App() {
   };
 
   const handleThumbClick = async (type) => {
-    setUserRating(type);
     const myTicket = accessCodes[selectedMovie.name] || null;
+    if (!myTicket) {
+      showFeedback("error", "You must own the movie to rate it.");
+      return;
+    }
 
+    setUserRating(type);
     try {
       await axios.post(`${API_BASE}/rate-movie`, {
         movieName: selectedMovie.name,
@@ -420,8 +428,13 @@ function App() {
 
   const handleSubmitComment = async () => {
     if (!userComment) return;
-    setIsProcessing(true);
     const myTicket = accessCodes[selectedMovie.name] || null;
+    if (!myTicket) {
+      showFeedback("error", "You must own the movie to comment.");
+      return;
+    }
+
+    setIsProcessing(true);
 
     try {
       await axios.post(`${API_BASE}/rate-movie`, {
@@ -552,7 +565,7 @@ function App() {
           </button>
         </form>
         <button
-          onClick={() => setView("home")}
+          onClick={() => changeView("home")}
           className="btn btn-ghost"
           style={{ marginTop: "20px" }}
         >
@@ -571,7 +584,7 @@ function App() {
       <div className="admin-dashboard">
         <div className="dashboard-header">
           <h1 className="section-title">BLACKWELL COMMAND</h1>
-          <button onClick={() => setView("home")} className="btn btn-ghost">
+          <button onClick={() => changeView("home")} className="btn btn-ghost">
             LOGOUT
           </button>
         </div>
@@ -837,12 +850,12 @@ function App() {
             src="/logo12.png"
             alt="BLACKWELL"
             className="nav-logo-img"
-            onClick={() => setView("home")}
+            onClick={() => changeView("home")}
           />
           <div className="nav-links">
             <span
               className={`nav-link ${view === "home" ? "active" : ""}`}
-              onClick={() => setView("home")}
+              onClick={() => changeView("home")}
             >
               Home
             </span>
@@ -850,13 +863,13 @@ function App() {
               className={`nav-link ${
                 view === "movies" || view === "movie-details" ? "active" : ""
               }`}
-              onClick={() => setView("movies")}
+              onClick={() => changeView("movies")}
             >
               Movies
             </span>
             <span
               className={`nav-link ${view === "shows" ? "active" : ""}`}
-              onClick={() => setView("shows")}
+              onClick={() => changeView("shows")}
             >
               Shows
             </span>
@@ -880,7 +893,7 @@ function App() {
                 height="24"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
+                stroke="var(--accent-color)"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -895,117 +908,121 @@ function App() {
 
       <div className="main-content">
         {searchQuery ? (
-          <div className="centered-container fade-in-view">
+          <div
+            className="centered-container-lg fade-in-view"
+            style={{ paddingTop: "40px" }}
+          >
             <h2 style={{ marginBottom: "30px", fontWeight: "300" }}>RESULTS</h2>
-            {filteredResults.map((item) => (
-              <div
-                key={item.id}
-                className="movie-card"
-                style={{ display: "flex", padding: "15px", gap: "20px" }}
-              >
-                <ProgressiveImage
-                  src={item.image}
-                  alt={item.name}
-                  style={{ width: "80px", borderRadius: "4px" }}
-                />
-                <div style={{ flex: 1 }}>
-                  <h4>{item.name}</h4>
-                  <button
-                    onClick={() => handlePlayRequest(item)}
-                    className="btn btn-primary btn-sm"
-                  >
-                    WATCH
-                  </button>
+            <div className="movie-grid">
+              {filteredResults.map((item) => (
+                <div
+                  key={item.id}
+                  className="movie-card"
+                  style={{ display: "flex", padding: "15px", gap: "20px" }}
+                >
+                  <ProgressiveImage
+                    src={item.image}
+                    alt={item.name}
+                    style={{ width: "200px", borderRadius: "4px" }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ marginTop: "0", fontSize: "1.5rem" }}>
+                      {item.name}
+                    </h3>
+                    <button
+                      onClick={() => handlePlayRequest(item)}
+                      className="btn btn-primary btn-sm"
+                      style={{ marginTop: "10px", maxWidth: "150px" }}
+                    >
+                      WATCH
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ) : (
           <div key={view} className="fade-in-view">
             {view === "home" && (
               <div>
                 <div className="hero-wrapper">
-                  <div
-                    className="play-overlay-btn"
-                    onClick={() => handlePlayRequest(MOVIE_DATA[0])}
-                  >
-                    <span className="play-icon">▶</span>
+                  <div className="hero-video-bg">
+                    <iframe
+                      ref={vimeoRef}
+                      src="https://player.vimeo.com/video/1144441206?background=1&autoplay=1&loop=1&byline=0&title=0&api=1"
+                      frameBorder="0"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      title="Cards on The Table Christmas Movie Trailer"
+                    ></iframe>
                   </div>
-                  {HERO_IMAGES.map((imgSrc, index) => (
-                    <img
-                      key={index}
-                      src={imgSrc}
-                      alt="Hero Slide"
-                      className="hero-slide"
-                      style={{ opacity: index === currentHeroIndex ? 1 : 0 }}
-                    />
-                  ))}
+
+                  <div className="hero-content">
+                    <h4 className="featured-tag">FEATURED FILM:</h4>
+                    <h1
+                      className="hero-title"
+                      style={{ color: "var(--accent-color)" }}
+                    >
+                      {MOVIE_DATA[0].name}
+                    </h1>
+
+                    <div style={{ marginTop: "20px", marginBottom: "20px" }}>
+                      <span
+                        className={`badge ${
+                          hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
+                        }`}
+                        style={{
+                          display: "inline-block",
+                          width: "fit-content",
+                        }}
+                      >
+                        {hasAccess(MOVIE_DATA[0].name)
+                          ? "You Have Access"
+                          : `KES ${MOVIE_DATA[0].price}`}
+                      </span>
+                    </div>
+
+                    <div className="hero-actions">
+                      <button
+                        onClick={() => handlePlayRequest(MOVIE_DATA[0])}
+                        className={
+                          hasAccess(MOVIE_DATA[0].name)
+                            ? "btn btn-success"
+                            : "btn btn-primary"
+                        }
+                        style={{ width: "220px" }}
+                      >
+                        {hasAccess(MOVIE_DATA[0].name)
+                          ? "▶ WATCH NOW"
+                          : "WATCH NOW"}
+                      </button>
+
+                      <button
+                        onClick={() => handleViewInfo(MOVIE_DATA[0])}
+                        className="btn btn-ghost"
+                        style={{
+                          width: "220px",
+                          border: "1px solid rgba(255,255,255,0.5)",
+                        }}
+                      >
+                        VIEW INFO
+                      </button>
+                    </div>
+                  </div>
+
+                  <button className="mute-toggle-btn" onClick={toggleMute}>
+                    {isMuted ? "🔇" : "🔊"}
+                  </button>
                 </div>
 
                 <div className="centered-container-lg">
-                  <div className="hero-content">
-                    <div>
-                      <h2 className="hero-title">{MOVIE_DATA[0].name}</h2>
-                    </div>
-                    <span
-                      className={`badge ${
-                        hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
-                      }`}
-                      style={{ marginTop: "15px" }}
-                    >
-                      {hasAccess(MOVIE_DATA[0].name)
-                        ? "You Have Access"
-                        : `KES ${MOVIE_DATA[0].price}`}
-                    </span>
-                  </div>
-
-                  <div className="hero-actions">
-                    <button
-                      onClick={() =>
-                        setActiveTrailer(MOVIE_DATA[0].trailerLink)
-                      }
-                      className="btn btn-secondary"
-                      style={{ maxWidth: "180px" }}
-                    >
-                      VIEW TRAILER
-                    </button>
-                    <button
-                      onClick={() => handlePlayRequest(MOVIE_DATA[0])}
-                      className={
-                        hasAccess(MOVIE_DATA[0].name)
-                          ? "btn btn-success"
-                          : "btn btn-primary"
-                      }
-                      style={{ maxWidth: "180px" }}
-                    >
-                      {hasAccess(MOVIE_DATA[0].name)
-                        ? "▶ WATCH NOW"
-                        : "BUY ACCESS"}
-                    </button>
-                    <button
-                      onClick={() => handleViewInfo(MOVIE_DATA[0])}
-                      className="btn btn-ghost"
-                      style={{ maxWidth: "180px" }}
-                    >
-                      VIEW INFO
-                    </button>
-                    <a
-                      href={MOVIE_DATA[0].imdbLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn btn-imdb"
-                      style={{
-                        maxWidth: "180px",
-                        textDecoration: "none",
-                        textAlign: "center",
-                        padding: "16px",
-                      }}
-                    >
-                      IMDb
-                    </a>
-                  </div>
-
-                  <div className="home-movie-info glossy-card">
+                  <div
+                    className="home-movie-info glossy-card"
+                    style={{
+                      padding: "50px",
+                      borderRadius: "12px",
+                      marginTop: "80px",
+                    }}
+                  >
                     <div className="detail-grid">
                       <div className="detail-poster">
                         <ProgressiveImage
@@ -1185,13 +1202,24 @@ function App() {
                 >
                   MOVIES
                 </h1>
-                <div className="movie-grid">
+                <div
+                  className="movie-grid"
+                  style={{ justifyContent: "center" }}
+                >
                   {movies.map((movie) => (
-                    <div key={movie.id} className="movie-card">
+                    <div
+                      key={movie.id}
+                      className="movie-card"
+                      style={{ maxWidth: "350px", margin: "0 auto" }}
+                    >
                       <ProgressiveImage
                         src={movie.image}
                         alt={movie.name}
-                        style={{ height: "400px" }}
+                        style={{
+                          width: "100%",
+                          aspectRatio: "2/3",
+                          objectFit: "cover",
+                        }}
                       />
                       <div className="card-content">
                         <h3 style={{ fontFamily: "Playfair Display, serif" }}>
@@ -1227,11 +1255,12 @@ function App() {
               >
                 <button
                   onClick={handleBack}
-                  className="btn-back"
+                  className="btn btn-ghost btn-back"
                   style={{
                     width: "auto",
-                    padding: "10px 20px",
+                    padding: "16px 32px",
                     marginBottom: "30px",
+                    border: "1px solid #333",
                   }}
                 >
                   ← BACK
@@ -1253,7 +1282,6 @@ function App() {
                       {selectedMovie.name}
                     </h1>
 
-                    {/* ADDED CLASS NAME HERE */}
                     <div
                       className="detail-flex-row"
                       style={{
@@ -1288,6 +1316,12 @@ function App() {
                         <span className="meta-label">RUNTIME:</span>
                         <span className="meta-value">
                           {selectedMovie.runtime}
+                        </span>
+                      </div>
+                      <div className="meta-row">
+                        <span className="meta-label">RATING:</span>
+                        <span className="meta-value">
+                          {selectedMovie.rating}
                         </span>
                       </div>
                       <div className="meta-row">
@@ -1335,7 +1369,6 @@ function App() {
                       </div>
                     </div>
 
-                    {/* ADDED CLASS NAME HERE */}
                     <div
                       className="detail-flex-row"
                       style={{
@@ -1553,7 +1586,7 @@ function App() {
                 fontFamily: "Playfair Display, serif",
               }}
             >
-              {selectedMovie?.name.toUpperCase()}
+              {selectedMovie?.name}
             </h2>
             <div className="gatekeeper-tabs">
               <button
