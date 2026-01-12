@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import axios from "axios";
 import emailjs from "@emailjs/browser";
 import "./App.css";
@@ -17,19 +11,10 @@ const MOVIE_DATA = [
     description:
       "An ex-couple team up to rob the gate collections at a Christmas event in 1992 Nairobi, but their layers of unresolved issues land them in police custody.",
     cast: [
-      {
-        name: "Nyakundi Isaboke",
-        link: "https://www.instagram.com/nyakundi_isaboke/",
-      },
-      {
-        name: "Shirleen Wangari",
-        link: "https://www.facebook.com/shirleenwangarikiura",
-      },
+      { name: "Nyakundi Isaboke", link: "https://www.instagram.com/nyakundi_isaboke/" },
+      { name: "Shirleen Wangari", link: "https://www.facebook.com/shirleenwangarikiura" },
       { name: "Mufasa Poet", link: "https://www.instagram.com/mufasapoet" },
-      {
-        name: "Murunyu Duncan",
-        link: "https://www.facebook.com/SirRunyu/?locale=de_DE",
-      },
+      { name: "Murunyu Duncan", link: "https://www.facebook.com/SirRunyu/?locale=de_DE" },
     ],
     director: {
       name: "Victor Gatonye",
@@ -408,7 +393,7 @@ function App() {
   const handleThumbClick = async (type) => {
     const myTicket = accessCodes[selectedMovie.name] || null;
     if (!myTicket) {
-      showFeedback("error", "You must own the movie to rate it.");
+      showFeedback("error", "You must buy access to rate this movie");
       return;
     }
 
@@ -788,11 +773,7 @@ function App() {
                     {r.email || "Anonymous"}
                   </td>
                   <td>
-                    {r.rating === "up"
-                      ? "👍"
-                      : r.rating === "down"
-                      ? "👎"
-                      : "-"}
+                    {r.rating === "up" ? "👍" : r.rating === "down" ? "👎" : "-"}
                   </td>
                   <td style={{ fontStyle: "italic" }}>
                     {r.comment || "No comment"}
@@ -926,9 +907,7 @@ function App() {
                     style={{ width: "200px", borderRadius: "4px" }}
                   />
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ marginTop: "0", fontSize: "1.5rem" }}>
-                      {item.name}
-                    </h3>
+                    <h3 style={{ marginTop: "0", fontSize: "1.5rem" }}>{item.name}</h3>
                     <button
                       onClick={() => handlePlayRequest(item)}
                       className="btn btn-primary btn-sm"
@@ -1054,21 +1033,9 @@ function App() {
                             </span>
                           </div>
                           <div className="meta-row">
-                            <span className="meta-label">RATING:</span>
-                            <span className="meta-value">
-                              {MOVIE_DATA[0].rating}
-                            </span>
-                          </div>
-                          <div className="meta-row">
                             <span className="meta-label">YEAR:</span>
                             <span className="meta-value">
                               {MOVIE_DATA[0].year}
-                            </span>
-                          </div>
-                          <div className="meta-row">
-                            <span className="meta-label">GENRE:</span>
-                            <span className="meta-value">
-                              {MOVIE_DATA[0].genre}
                             </span>
                           </div>
                           <div className="meta-row">
@@ -1202,16 +1169,9 @@ function App() {
                 >
                   MOVIES
                 </h1>
-                <div
-                  className="movie-grid"
-                  style={{ justifyContent: "center" }}
-                >
+                <div className="movie-grid" style={{ justifyContent: "center" }}>
                   {movies.map((movie) => (
-                    <div
-                      key={movie.id}
-                      className="movie-card"
-                      style={{ maxWidth: "350px", margin: "0 auto" }}
-                    >
+                    <div key={movie.id} className="movie-card" style={{ maxWidth: "350px", margin: "0 auto" }}>
                       <ProgressiveImage
                         src={movie.image}
                         alt={movie.name}
@@ -1319,20 +1279,8 @@ function App() {
                         </span>
                       </div>
                       <div className="meta-row">
-                        <span className="meta-label">RATING:</span>
-                        <span className="meta-value">
-                          {selectedMovie.rating}
-                        </span>
-                      </div>
-                      <div className="meta-row">
                         <span className="meta-label">YEAR:</span>
                         <span className="meta-value">{selectedMovie.year}</span>
-                      </div>
-                      <div className="meta-row">
-                        <span className="meta-label">GENRE:</span>
-                        <span className="meta-value">
-                          {selectedMovie.genre}
-                        </span>
                       </div>
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
