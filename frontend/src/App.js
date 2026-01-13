@@ -936,55 +936,57 @@ function App() {
                   </div>
 
                   <div className="hero-content">
-                    <h4 className="featured-tag">FEATURED FILM:</h4>
-                    <h1
-                      className="hero-title"
-                      style={{ color: "var(--accent-color)" }}
-                    >
-                      {MOVIE_DATA[0].name}
-                    </h1>
-
-                    <div style={{ marginTop: "20px", marginBottom: "20px" }}>
-                      <span
-                        className={`badge ${
-                          hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
-                        }`}
-                        style={{
-                          display: "inline-block",
-                          width: "fit-content",
-                        }}
+                    <div className="hero-text-wrapper">
+                      <h4 className="featured-tag">FEATURED FILM:</h4>
+                      <h1
+                        className="hero-title"
+                        style={{ color: "var(--accent-color)" }}
                       >
-                        {hasAccess(MOVIE_DATA[0].name)
-                          ? "You Have Access"
-                          : `KES ${MOVIE_DATA[0].price}`}
-                      </span>
-                    </div>
+                        {MOVIE_DATA[0].name}
+                      </h1>
 
-                    <div className="hero-actions">
-                      <button
-                        onClick={() => handlePlayRequest(MOVIE_DATA[0])}
-                        className={
-                          hasAccess(MOVIE_DATA[0].name)
-                            ? "btn btn-success"
-                            : "btn btn-primary"
-                        }
-                        style={{ width: "220px" }}
-                      >
-                        {hasAccess(MOVIE_DATA[0].name)
-                          ? "▶ WATCH NOW"
-                          : "WATCH NOW"}
-                      </button>
+                      <div style={{ marginTop: "20px", marginBottom: "20px" }}>
+                        <span
+                          className={`badge ${
+                            hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
+                          }`}
+                          style={{
+                            display: "inline-block",
+                            width: "fit-content",
+                          }}
+                        >
+                          {hasAccess(MOVIE_DATA[0].name)
+                            ? "You Have Access"
+                            : `KES ${MOVIE_DATA[0].price}`}
+                        </span>
+                      </div>
 
-                      <button
-                        onClick={() => handleViewInfo(MOVIE_DATA[0])}
-                        className="btn btn-ghost"
-                        style={{
-                          width: "220px",
-                          border: "1px solid rgba(255,255,255,0.5)",
-                        }}
-                      >
-                        VIEW INFO
-                      </button>
+                      <div className="hero-actions">
+                        <button
+                          onClick={() => handlePlayRequest(MOVIE_DATA[0])}
+                          className={
+                            hasAccess(MOVIE_DATA[0].name)
+                              ? "btn btn-success"
+                              : "btn btn-primary"
+                          }
+                          style={{ width: "220px" }}
+                        >
+                          {hasAccess(MOVIE_DATA[0].name)
+                            ? "▶ WATCH NOW"
+                            : "WATCH NOW"}
+                        </button>
+
+                        <button
+                          onClick={() => handleViewInfo(MOVIE_DATA[0])}
+                          className="btn btn-ghost"
+                          style={{
+                            width: "220px",
+                            border: "1px solid rgba(255,255,255,0.5)",
+                          }}
+                        >
+                          VIEW INFO
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1033,9 +1035,21 @@ function App() {
                             </span>
                           </div>
                           <div className="meta-row">
+                            <span className="meta-label">RATING:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].rating}
+                            </span>
+                          </div>
+                          <div className="meta-row">
                             <span className="meta-label">YEAR:</span>
                             <span className="meta-value">
                               {MOVIE_DATA[0].year}
+                            </span>
+                          </div>
+                          <div className="meta-row">
+                            <span className="meta-label">GENRE:</span>
+                            <span className="meta-value">
+                              {MOVIE_DATA[0].genre}
                             </span>
                           </div>
                           <div className="meta-row">
@@ -1156,7 +1170,10 @@ function App() {
             )}
 
             {view === "movies" && (
-              <div className="centered-container-lg">
+              <div
+                className="centered-container-lg"
+                style={{ paddingTop: "40px" }}
+              >
                 <h1
                   style={{
                     textAlign: "center",
@@ -1231,16 +1248,7 @@ function App() {
                     <ProgressiveImage src={selectedMovie.image} alt="poster" />
                   </div>
                   <div className="info-font">
-                    <h1
-                      style={{
-                        fontSize: "3rem",
-                        margin: "0 0 10px 0",
-                        color: "var(--accent-color)",
-                        fontFamily: "Playfair Display, serif",
-                      }}
-                    >
-                      {selectedMovie.name}
-                    </h1>
+                    <h1 className="detail-title">{selectedMovie.name}</h1>
 
                     <div
                       className="detail-flex-row"
@@ -1279,8 +1287,20 @@ function App() {
                         </span>
                       </div>
                       <div className="meta-row">
+                        <span className="meta-label">RATING:</span>
+                        <span className="meta-value">
+                          {selectedMovie.rating}
+                        </span>
+                      </div>
+                      <div className="meta-row">
                         <span className="meta-label">YEAR:</span>
                         <span className="meta-value">{selectedMovie.year}</span>
+                      </div>
+                      <div className="meta-row">
+                        <span className="meta-label">GENRE:</span>
+                        <span className="meta-value">
+                          {selectedMovie.genre}
+                        </span>
                       </div>
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
@@ -1459,7 +1479,7 @@ function App() {
               alt="BLACKWELL"
               className="footer-logo-img"
             />
-            <p style={{ color: "#666", fontSize: "12px", marginTop: "10px" }}>
+            <p style={{ color: "#666", fontSize: "12px", marginTop: "10px", marginLeft: "15px" }}>
               © 2025 Blackwell Films.
             </p>
           </div>
