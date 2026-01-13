@@ -1027,7 +1027,7 @@ html {
   /* POSITION TOGGLE BUTTONS TO BOTTOM RIGHT FOR MOBILE */
   .hero-controls-container {
     top: auto;      /* Remove top positioning */
-    bottom: 10px;   /* Move to bottom */
+    bottom: 220px;   /* Move to bottom */
     right: 10px;    /* Keep right alignment */
     transform: scale(0.8); /* Scale down to 80% size */
     transform-origin: bottom right; /* Ensure it shrinks towards the corner */
