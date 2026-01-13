@@ -983,9 +983,9 @@ html {
     background: #000; 
   }
 
-  /* Mobile Detail Title - Reduced size */
+  /* Mobile Detail Title - Reduced size (UPDATED) */
   .detail-title {
-    font-size: 2rem;
+    font-size: 1.5rem; /* Reduced from 2rem per request */
   }
 
   /* Mobile Hero Title - Reduced Size & Centered */

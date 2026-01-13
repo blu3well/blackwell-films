@@ -999,7 +999,7 @@ function App() {
                   <div
                     className="home-movie-info glossy-card"
                     style={{
-                      padding: "50px",
+                      padding: "30px", // REDUCED FROM 50px
                       borderRadius: "12px",
                       marginTop: "80px",
                     }}
@@ -1021,6 +1021,33 @@ function App() {
                         >
                           SYNOPSIS
                         </h3>
+
+                        {/* ADDED BADGES ROW FOR HOME CARD */}
+                        <div
+                          className="detail-flex-row"
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            marginBottom: "20px",
+                          }}
+                        >
+                          <span
+                            className={`badge ${
+                              hasAccess(MOVIE_DATA[0].name) ? "badge-owned" : ""
+                            }`}
+                          >
+                            {hasAccess(MOVIE_DATA[0].name)
+                              ? "You Have Access"
+                              : `KES ${MOVIE_DATA[0].price}`}
+                          </span>
+                          <span className="badge" style={{ background: "#333" }}>
+                            {MOVIE_DATA[0].genre}
+                          </span>
+                          <span className="badge" style={{ background: "#333" }}>
+                            {MOVIE_DATA[0].rating}
+                          </span>
+                        </div>
+
                         <p
                           className="detail-desc"
                           style={{ fontSize: "1.1rem" }}
@@ -1174,18 +1201,7 @@ function App() {
                 className="centered-container-lg"
                 style={{ paddingTop: "40px" }}
               >
-                <h1
-                  style={{
-                    textAlign: "center",
-                    marginBottom: "40px",
-                    fontWeight: "300",
-                    letterSpacing: "2px",
-                    fontFamily: "Playfair Display, serif",
-                    color: "var(--accent-color)",
-                  }}
-                >
-                  MOVIES
-                </h1>
+                {/* REMOVED TITLE HERE */}
                 <div className="movie-grid" style={{ justifyContent: "center" }}>
                   {movies.map((movie) => (
                     <div key={movie.id} className="movie-card" style={{ maxWidth: "350px", margin: "0 auto" }}>
