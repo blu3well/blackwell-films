@@ -116,6 +116,29 @@ html {
   transform: translate(-50%, -50%);
 }
 
+.hero-slideshow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+
+.slide-img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 2s ease-in-out; /* SLOWED TRANSITION TO 2 SECONDS */
+}
+
+.slide-img.active {
+  opacity: 1;
+}
+
 .hero-content {
   position: absolute;
   bottom: 0;
@@ -164,10 +187,8 @@ html {
   font-weight: 700;
 }
 
+.toggle-hero-btn,
 .mute-toggle-btn {
-  position: absolute;
-  bottom: 60px;
-  right: 5%;
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid #333;
   width: 50px;
@@ -183,6 +204,16 @@ html {
   transition: all 0.3s;
 }
 
+.toggle-hero-btn {
+  width: auto;
+  padding: 0 20px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.toggle-hero-btn:hover,
 .mute-toggle-btn:hover {
   background: var(--accent-color);
   color: #000;
@@ -670,10 +701,10 @@ html {
   font-weight: bold;
 }
 
-/* --- MOVIES GRID & CARDS (RESTORED) --- */
+/* --- MOVIES GRID & CARDS (REDUCED SIZE) --- */
 .movie-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* REDUCED FROM 250px */
   gap: 30px;
   width: 100%;
   margin-top: 20px;
@@ -956,6 +987,19 @@ html {
     width: 100%;
     aspect-ratio: 16/9;
     height: auto;
+  }
+  
+  /* MOBILE SLIDESHOW FIXES */
+  .hero-slideshow {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio to match video */
+  }
+  
+  .slide-img {
+    background-size: contain; /* Ensure full image is seen */
+    background-repeat: no-repeat;
   }
 
   .hero-video-bg iframe {

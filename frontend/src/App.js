@@ -28,6 +28,14 @@ const MOVIE_DATA = [
     movieFile:
       "https://player.vimeo.com/video/1145911659?autoplay=1&badge=0&autopause=0",
     image: "/COTTposter1.jpg",
+    slides: [
+      "/beth&jackso.webp",
+      "/kip.webp",
+      "/ndocha.webp",
+      "/beth.webp",
+      "/beth&jackso2.webp",
+      "/jackso.webp",
+    ],
     imdbLink: "https://www.imdb.com/title/tt38939205/",
     isFeatured: true,
     type: "movie",
@@ -109,9 +117,34 @@ function App() {
   const [ratingsPage, setRatingsPage] = useState(1);
   const ROWS_PER_PAGE = 10;
 
-  // MUTE STATE
+  // HERO & SLIDESHOW STATE
+  const [heroMode, setHeroMode] = useState("video"); // 'video' or 'slideshow'
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const vimeoRef = useRef(null);
+  
+  // Slideshow Autoplay Effect
+  useEffect(() => {
+    let slideInterval;
+    if (heroMode === "slideshow") {
+      slideInterval = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % MOVIE_DATA[0].slides.length);
+      }, 7000); // CHANGED TO 7 SECONDS (Slowed down)
+    }
+    return () => clearInterval(slideInterval);
+  }, [heroMode]);
+
+  // Video Autoplay Limit Effect
+  useEffect(() => {
+    let videoTimer;
+    if (heroMode === "video" && view === "home") {
+      // CHANGED TO 130 SECONDS
+      videoTimer = setTimeout(() => {
+        setHeroMode("slideshow");
+      }, 130000); 
+    }
+    return () => clearTimeout(videoTimer);
+  }, [heroMode, view]);
 
   const movies = useMemo(() => MOVIE_DATA, []);
   const [selectedMovie, setSelectedMovie] = useState(movies[0]);
@@ -146,6 +179,10 @@ function App() {
         "*"
       );
     }
+  };
+
+  const toggleHeroMode = () => {
+    setHeroMode(prev => prev === "video" ? "slideshow" : "video");
   };
 
   const showFeedback = (type, msg) => {
@@ -925,15 +962,28 @@ function App() {
             {view === "home" && (
               <div>
                 <div className="hero-wrapper">
-                  <div className="hero-video-bg">
-                    <iframe
-                      ref={vimeoRef}
-                      src="https://player.vimeo.com/video/1144441206?background=1&autoplay=1&loop=1&byline=0&title=0&api=1"
-                      frameBorder="0"
-                      allow="autoplay; fullscreen; picture-in-picture"
-                      title="Cards on The Table Christmas Movie Trailer"
-                    ></iframe>
-                  </div>
+                  {heroMode === "video" ? (
+                    <div className="hero-video-bg">
+                      <iframe
+                        ref={vimeoRef}
+                        // Added loop=0 to play once, then pause.
+                        src="https://player.vimeo.com/video/1144441206?background=1&autoplay=1&loop=0&byline=0&title=0&api=1"
+                        frameBorder="0"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        title="Cards on The Table Christmas Movie Trailer"
+                      ></iframe>
+                    </div>
+                  ) : (
+                    <div className="hero-slideshow">
+                      {MOVIE_DATA[0].slides.map((slide, index) => (
+                        <div
+                          key={index}
+                          className={`slide-img ${index === currentSlide ? "active" : ""}`}
+                          style={{ backgroundImage: `url(${slide})` }}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   <div className="hero-content">
                     <div className="hero-text-wrapper">
@@ -990,16 +1040,24 @@ function App() {
                     </div>
                   </div>
 
-                  <button className="mute-toggle-btn" onClick={toggleMute}>
-                    {isMuted ? "🔇" : "🔊"}
-                  </button>
+                  <div style={{ position: "absolute", bottom: "60px", right: "5%", display: "flex", gap: "10px", zIndex: 10 }}>
+                    {/* UPDATED TOGGLE BUTTON TEXT LOGIC (REMOVED EMOJIS) */}
+                    <button className="toggle-hero-btn" onClick={toggleHeroMode}>
+                      {heroMode === "video" ? "HIDE TRAILER" : "WATCH TRAILER"}
+                    </button>
+                    {heroMode === "video" && (
+                      <button className="mute-toggle-btn" style={{ position: "relative", bottom: "auto", right: "auto" }} onClick={toggleMute}>
+                        {isMuted ? "🔇" : "🔊"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="centered-container-lg">
                   <div
                     className="home-movie-info glossy-card"
                     style={{
-                      padding: "30px", // REDUCED FROM 50px
+                      padding: "30px",
                       borderRadius: "12px",
                       marginTop: "80px",
                     }}
@@ -1022,7 +1080,6 @@ function App() {
                           SYNOPSIS
                         </h3>
 
-                        {/* ADDED BADGES ROW FOR HOME CARD */}
                         <div
                           className="detail-flex-row"
                           style={{
@@ -1061,24 +1118,14 @@ function App() {
                               {MOVIE_DATA[0].runtime}
                             </span>
                           </div>
-                          <div className="meta-row">
-                            <span className="meta-label">RATING:</span>
-                            <span className="meta-value">
-                              {MOVIE_DATA[0].rating}
-                            </span>
-                          </div>
+                          {/* RATING REMOVED */}
                           <div className="meta-row">
                             <span className="meta-label">YEAR:</span>
                             <span className="meta-value">
                               {MOVIE_DATA[0].year}
                             </span>
                           </div>
-                          <div className="meta-row">
-                            <span className="meta-label">GENRE:</span>
-                            <span className="meta-value">
-                              {MOVIE_DATA[0].genre}
-                            </span>
-                          </div>
+                          {/* GENRE REMOVED */}
                           <div className="meta-row">
                             <span className="meta-label">DIRECTOR:</span>
                             <span className="meta-value">
@@ -1175,12 +1222,7 @@ function App() {
                         className="auth-input"
                         value={userComment}
                         onChange={(e) => setUserComment(e.target.value)}
-                        style={{
-                          width: "100%",
-                          marginBottom: "8px",
-                          fontSize: "12px",
-                          padding: "8px",
-                        }}
+                        style={{ width: "100%", marginBottom: "10px" }}
                       />
                       <button
                         onClick={handleSubmitComment}
@@ -1201,7 +1243,6 @@ function App() {
                 className="centered-container-lg"
                 style={{ paddingTop: "40px" }}
               >
-                {/* REMOVED TITLE HERE */}
                 <div className="movie-grid" style={{ justifyContent: "center" }}>
                   {movies.map((movie) => (
                     <div key={movie.id} className="movie-card" style={{ maxWidth: "350px", margin: "0 auto" }}>
@@ -1302,22 +1343,12 @@ function App() {
                           {selectedMovie.runtime}
                         </span>
                       </div>
-                      <div className="meta-row">
-                        <span className="meta-label">RATING:</span>
-                        <span className="meta-value">
-                          {selectedMovie.rating}
-                        </span>
-                      </div>
+                      {/* RATING REMOVED */}
                       <div className="meta-row">
                         <span className="meta-label">YEAR:</span>
                         <span className="meta-value">{selectedMovie.year}</span>
                       </div>
-                      <div className="meta-row">
-                        <span className="meta-label">GENRE:</span>
-                        <span className="meta-value">
-                          {selectedMovie.genre}
-                        </span>
-                      </div>
+                      {/* GENRE REMOVED */}
                       <div className="meta-row">
                         <span className="meta-label">DIRECTOR:</span>
                         <span className="meta-value">
