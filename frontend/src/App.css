@@ -123,6 +123,8 @@ html {
   top: 0;
   left: 0;
   z-index: 0;
+  /* Smooth Fade Entry */
+  animation: fadeIn 0.8s ease-out;
 }
 
 .slide-img {
@@ -132,7 +134,7 @@ html {
   background-size: cover;
   background-position: center;
   opacity: 0;
-  transition: opacity 2s ease-in-out; /* SLOWED TRANSITION TO 2 SECONDS */
+  transition: opacity 2s ease-in-out;
 }
 
 .slide-img.active {
@@ -187,16 +189,25 @@ html {
   font-weight: 700;
 }
 
+/* --- HERO TOGGLES CONTAINER --- */
+.hero-controls-container {
+  position: absolute;
+  bottom: 60px;
+  right: 5%;
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
 .toggle-hero-btn,
 .mute-toggle-btn {
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid #333;
+  border: 1px solid var(--accent-color);
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  color: #fff;
+  color: var(--accent-color);
   cursor: pointer;
-  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1013,6 +1024,20 @@ html {
     min-height: 0;
   }
 
+  /* POSITION TOGGLE BUTTONS ON TOP OF VIDEO FOR MOBILE */
+  .hero-controls-container {
+    top: 10px;
+    bottom: auto;
+    right: 10px;
+  }
+  
+  .mute-toggle-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
   .hero-content {
     position: relative;
     background: #000;
@@ -1055,16 +1080,6 @@ html {
     width: auto !important;
     padding: 10px 20px;
     font-size: 12px;
-  }
-
-  .mute-toggle-btn {
-    bottom: auto;
-    right: 10px;
-    top: 10px;
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-    background: rgba(0, 0, 0, 0.6);
   }
 
   /* CENTERED FOOTER */

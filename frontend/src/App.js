@@ -122,6 +122,16 @@ function App() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const vimeoRef = useRef(null);
+
+  // IMAGE PRELOADER to prevent lag
+  useEffect(() => {
+    if (MOVIE_DATA[0].slides) {
+      MOVIE_DATA[0].slides.forEach((src) => {
+        const img = new Image();
+        img.src = src;
+      });
+    }
+  }, []);
   
   // Slideshow Autoplay Effect
   useEffect(() => {
@@ -129,7 +139,7 @@ function App() {
     if (heroMode === "slideshow") {
       slideInterval = setInterval(() => {
         setCurrentSlide((prev) => (prev + 1) % MOVIE_DATA[0].slides.length);
-      }, 7000); // CHANGED TO 7 SECONDS (Slowed down)
+      }, 7000); 
     }
     return () => clearInterval(slideInterval);
   }, [heroMode]);
@@ -138,7 +148,6 @@ function App() {
   useEffect(() => {
     let videoTimer;
     if (heroMode === "video" && view === "home") {
-      // CHANGED TO 130 SECONDS
       videoTimer = setTimeout(() => {
         setHeroMode("slideshow");
       }, 130000); 
@@ -1040,13 +1049,12 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={{ position: "absolute", bottom: "60px", right: "5%", display: "flex", gap: "10px", zIndex: 10 }}>
-                    {/* UPDATED TOGGLE BUTTON TEXT LOGIC (REMOVED EMOJIS) */}
+                  <div className="hero-controls-container">
                     <button className="toggle-hero-btn" onClick={toggleHeroMode}>
                       {heroMode === "video" ? "HIDE TRAILER" : "WATCH TRAILER"}
                     </button>
                     {heroMode === "video" && (
-                      <button className="mute-toggle-btn" style={{ position: "relative", bottom: "auto", right: "auto" }} onClick={toggleMute}>
+                      <button className="mute-toggle-btn" onClick={toggleMute}>
                         {isMuted ? "🔇" : "🔊"}
                       </button>
                     )}
